@@ -12,8 +12,8 @@ import io, re, os, secrets
 app = FastAPI(title="Adit Pay Statement Analyser")
 
 # ── CONSTANTS (HARDCODED FOR STABILITY) ────────────────────────────────────────
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://statement-analyzer-frontend.onrender.com")
-APP_BASE_URL = os.getenv("APP_BASE_URL", "https://statement-analyzer-ap.onrender.com")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://statement-analyzer-ap-1.onrender.com")
+APP_BASE_URL = os.getenv("APP_BASE_URL", "https://statement-analyzer-backend.onrender.com")
 
 SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_hex(32))
 
