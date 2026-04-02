@@ -11,20 +11,17 @@ import io, re, os, secrets
 
 app = FastAPI(title="Adit Pay Statement Analyser")
 
-# ── Environment Config ─────────────────────────────────────────────────────────
-SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_hex(32))
+# ── CONSTANTS (HARDCODED FOR STABILITY) ────────────────────────────────────────
+FRONTEND_URL = "https://statement-analyzer-frontend.onrender.com"
+APP_BASE_URL = "https://statement-analyzer-ap.onrender.com"
 
-APP_BASE_URL = os.getenv("APP_BASE_URL")  # backend URL
-FRONTEND_URL = os.getenv(
-    "FRONTEND_URL",
-    "https://statement-analyzer-ap-1.onrender.com"
-)
+SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_hex(32))
 
 GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 ALLOWED_DOMAIN       = "adit.com"
 
-# ── Session Middleware (FIXED FOR RENDER) ──────────────────────────────────────
+# ── Session Middleware ─────────────────────────────────────────────────────────
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
@@ -32,7 +29,7 @@ app.add_middleware(
     same_site="none"
 )
 
-# ── CORS (FIXED) ───────────────────────────────────────────────────────────────
+# ── CORS ───────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_URL],
@@ -57,12 +54,13 @@ def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
 
-# ── Auth Routes (FIXED REDIRECTS) ──────────────────────────────────────────────
+# ── Auth Routes ────────────────────────────────────────────────────────────────
 
 @app.get("/auth/login")
 async def login(request: Request):
     redirect_uri = f"{APP_BASE_URL}/auth/callback"
     return await oauth.google.authorize_redirect(request, redirect_uri)
+
 
 @app.get("/auth/callback")
 async def auth_callback(request: Request):
@@ -80,17 +78,20 @@ async def auth_callback(request: Request):
         )
 
     request.session["user"] = {
-        "email":   email,
-        "name":    user_info.get("name", email.split("@")[0]),
+        "email": email,
+        "name": user_info.get("name", email.split("@")[0]),
         "picture": user_info.get("picture", ""),
     }
 
-    return RedirectResponse(url=f"{FRONTEND_URL}/")
+    # ✅ FINAL REDIRECT FIX
+    return RedirectResponse(url=FRONTEND_URL)
+
 
 @app.get("/auth/logout")
 async def logout(request: Request):
     request.session.clear()
-    return RedirectResponse(url=f"{FRONTEND_URL}/")
+    return RedirectResponse(url=FRONTEND_URL)
+
 
 @app.get("/api/me")
 async def me(request: Request):
@@ -98,6 +99,7 @@ async def me(request: Request):
     if not user:
         return JSONResponse({"authenticated": False})
     return JSONResponse({"authenticated": True, "user": user})
+
 
 # ── Calculation Logic ──────────────────────────────────────────────────────────
 ADIT_RATE_CP   = 0.0225
@@ -107,45 +109,29 @@ ADIT_AUTH_ONL  = 0.30
 
 def calc_cp(amount, count):
     tf = amount * ADIT_RATE_CP
-    af = count  * ADIT_AUTH_CP
+    af = count * ADIT_AUTH_CP
     return {"type": "Card Present", "amount": amount, "count": count,
-            "trn_fee": round(tf,2), "auth_fee": round(af,2),
-            "total_fee": round(tf+af,2), "rate_label": "2.25% + $0.20"}
+            "trn_fee": round(tf, 2), "auth_fee": round(af, 2),
+            "total_fee": round(tf + af, 2)}
 
 def calc_online(amount, count):
     tf = amount * ADIT_RATE_ONL
-    af = count  * ADIT_AUTH_ONL
-    return {"type": "Online (Card Not Present)", "amount": amount, "count": count,
-            "trn_fee": round(tf,2), "auth_fee": round(af,2),
-            "total_fee": round(tf+af,2), "rate_label": "2.90% + $0.30"}
+    af = count * ADIT_AUTH_ONL
+    return {"type": "Online", "amount": amount, "count": count,
+            "trn_fee": round(tf, 2), "auth_fee": round(af, 2),
+            "total_fee": round(tf + af, 2)}
 
-def build_analysis(existing_merchant, total_amount, total_count, total_fees_paid, card_present_pct, mode):
-    if mode == "card_present_only":
-        adit_row   = calc_cp(total_amount, total_count)
-        adit_total = adit_row["total_fee"]
-        rows = [adit_row]
-    else:
-        op = 1.0 - card_present_pct
-        r_cp  = calc_cp(total_amount * card_present_pct, total_count * card_present_pct)
-        r_on  = calc_online(total_amount * op, total_count * op)
-        adit_total = r_cp["total_fee"] + r_on["total_fee"]
-        rows = [r_cp, r_on]
+def build_analysis(existing_merchant, total_amount, total_count, total_fees_paid, card_present_pct):
+    cp = calc_cp(total_amount * card_present_pct, total_count * card_present_pct)
+    op = calc_online(total_amount * (1 - card_present_pct), total_count * (1 - card_present_pct))
+    adit_total = cp["total_fee"] + op["total_fee"]
 
-    avg_pct  = adit_total / total_amount if total_amount else 0
-    ex_pct   = total_fees_paid / total_amount if total_amount else 0
     return {
-        "existing_merchant":    existing_merchant,
-        "total_amount":         round(total_amount, 2),
-        "total_count":          total_count,
-        "total_fees_paid":      round(total_fees_paid, 2),
-        "existing_avg_fee_pct": round(ex_pct * 100, 4),
-        "card_present_pct":     round(card_present_pct * 100, 1),
-        "online_pct":           round((1 - card_present_pct) * 100, 1),
-        "mode":                 mode,
-        "adit_rows":            rows,
-        "adit_total_fee":       round(adit_total, 2),
-        "adit_avg_fee_pct":     round(avg_pct * 100, 4),
-        "savings":              round(total_fees_paid - adit_total, 2),
+        "existing_merchant": existing_merchant,
+        "total_amount": total_amount,
+        "total_fees_paid": total_fees_paid,
+        "adit_total_fee": round(adit_total, 2),
+        "savings": round(total_fees_paid - adit_total, 2),
     }
 
 # ── File Parsing ───────────────────────────────────────────────────────────────
@@ -158,11 +144,8 @@ def extract_pdf(data):
                 text += t + "\n"
     return text
 
-def extract_image(data):
-    return pytesseract.image_to_string(Image.open(io.BytesIO(data)))
-
 def parse_statement(raw):
-    return {"raw_text": raw[:3000]}
+    return {"raw_text": raw[:2000]}
 
 # ── API Routes ─────────────────────────────────────────────────────────────────
 @app.post("/api/upload")
@@ -171,11 +154,7 @@ async def upload_statement(file: UploadFile = File(...), user=Depends(get_curren
     raw = extract_pdf(data)
     return {"extracted": parse_statement(raw)}
 
-@app.post("/api/calculate")
-async def calculate(inp: BaseModel, user=Depends(get_current_user)):
-    return {"message": "Calculation working"}
-
-# ── Serve React SPA ────────────────────────────────────────────────────────────
+# ── SPA Serve (optional) ───────────────────────────────────────────────────────
 FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 
 if os.path.isdir(FRONTEND_DIST):
