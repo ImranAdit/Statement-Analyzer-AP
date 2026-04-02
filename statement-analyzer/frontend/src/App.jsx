@@ -266,100 +266,202 @@ function UploadZone({onExtracted,setLoading,loading}) {
   )
 }
 
-// ── Results Table ─────────────────────────────────────────────────────────────
-function ResultsTable({result}) {
-  const pos=result.savings>=0
-  return (
-    <div style={{display:'flex',flexDirection:'column',gap:'1.5rem'}}>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:'1rem'}}>
-        <StatBox icon={DollarSign}  label="Total Trn Amount"    value={fmtC(result.total_amount)}        accent={T.teal}    delay={0}/>
-        <StatBox icon={Hash}        label="Total Trn Count"     value={fmt(result.total_count,0)}         accent={T.blue}    delay={.06}/>
-        <StatBox icon={Percent}     label="Existing Avg Fee"    value={fmtP(result.existing_avg_fee_pct)} accent="#818cf8"   delay={.12}/>
-        <StatBox icon={TrendingDown} label="Savings with Adit"  value={fmtC(result.savings)}
-          accent={pos?T.success:T.danger} delay={.18}/>
-      </div>
+// ── Analysis Dashboard (Step 3) ────────────────────────────────────────────────
+function AnalysisDashboard({result}) {
+  const pos = result.savings >= 0
+  const isStrong = result.diff_pct > 5
 
-      <div>
-        <p style={{fontSize:'.72rem',fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',
-          color:T.teal,marginBottom:'.65rem',fontFamily:'var(--font-head)'}}>Existing Merchant</p>
-        <div style={{overflowX:'auto'}}>
-          <table style={tblStyle}>
-            <thead><tr>{['Merchant','Total Trn Amt','No. of Trn','Total Fee Paid','Avg Fee %','% of Type'].map(h=><Th key={h}>{h}</Th>)}</tr></thead>
-            <tbody>
-              <tr>
-                <Td bold>{result.existing_merchant}</Td>
-                <Td>{fmtC(result.total_amount)}</Td>
-                <Td>{fmt(result.total_count,0)}</Td>
-                <Td>{fmtC(result.total_fees_paid)}</Td>
-                <Td>{fmtP(result.existing_avg_fee_pct)}</Td>
-                <Td>100%</Td>
-              </tr>
-            </tbody>
-          </table>
+  return (
+    <div style={{background:'#ffffff', borderRadius:16, border:`1px solid #e2e8f0`, overflow:'hidden', color:T.navy, fontFamily:'var(--font-head)'}}>
+      
+      {/* Dashboard Header */}
+      <div style={{padding:'1.5rem 2rem', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
+        <div>
+          <h2 style={{fontSize:'1.4rem', fontWeight:900, textTransform:'uppercase', color:T.navy, letterSpacing:'.03em', marginBottom:'.2rem'}}>
+            {result.existing_merchant || 'UNNAMED MERCHANT'}
+          </h2>
+          <p style={{fontSize:'.85rem', color:'#64748b', fontWeight:500}}>
+            Statement Date • Saved Today
+          </p>
         </div>
       </div>
 
-      <div>
-        <p style={{fontSize:'.72rem',fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',
-          color:T.teal,marginBottom:'.65rem',fontFamily:'var(--font-head)'}}>Adit Pay Comparison</p>
-        <div style={{overflowX:'auto'}}>
-          <table style={tblStyle}>
-            <thead><tr>{['Type','Total Trn Amt','No. of Trn','Trn Fee','Auth Fee','Total Fee','Rate','% of Type'].map(h=><Th key={h}>{h}</Th>)}</tr></thead>
+      <div style={{padding:'2rem'}}>
+        {/* AI Summary Block */}
+        <div style={{background:T.navy, borderRadius:16, padding:'1.5rem', color:'#f8fafc', marginBottom:'2rem', boxShadow:'0 10px 25px rgba(10,22,40,0.1)'}}>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem'}}>
+            <span style={{fontSize:'.75rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'.1em', color:'#94a3b8'}}>
+              AI Summary
+            </span>
+            {isStrong && (
+              <span style={{background:'rgba(16,185,129,0.2)', color:'#34d399', fontSize:'.7rem', fontWeight:800, padding:'4px 10px', borderRadius:100, textTransform:'uppercase', letterSpacing:'.05em'}}>
+                ● Strong Opportunity
+              </span>
+            )}
+          </div>
+          
+          <p style={{fontSize:'.95rem', lineHeight:1.6, color:'#f1f5f9', fontWeight:400, marginBottom:'2rem'}}>
+            <strong style={{fontWeight:800, color:'#fff'}}>{result.existing_merchant || 'The merchant'}</strong> currently pays{' '}
+            <strong style={{color:'#fbbf24'}}>${fmt(result.total_fees_paid)}/month</strong> to their existing processor at a{' '}
+            <strong style={{color:'#fbbf24'}}>{fmt(result.existing_avg_fee_pct)}% effective rate</strong>. Switching to Adit Pay's flat-rate pricing brings that down to{' '}
+            <strong style={{color:'#34d399'}}>${fmt(result.adit_total_fee)}/month</strong> — a{' '}
+            <strong style={{color:'#34d399'}}>{fmt(result.diff_pct)}% reduction</strong> worth{' '}
+            <strong style={{color:'#34d399'}}>${fmt(result.savings)}/month</strong> in real cash back to the practice.
+          </p>
+
+          <div style={{display:'flex', gap:'2rem', marginBottom:'2rem'}}>
+            <div style={{flex:1}}>
+              <p style={{fontSize:'.7rem', fontWeight:800, textTransform:'uppercase', color:'#94a3b8', marginBottom:'.5rem', letterSpacing:'.05em'}}>Current Fees</p>
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'.4rem'}}>
+                <span style={{fontSize:'1.1rem', fontWeight:800}}>${fmt(result.total_fees_paid)} <span style={{fontSize:'.75rem', color:'#94a3b8', fontWeight:600}}>({fmt(result.existing_avg_fee_pct)}%)</span></span>
+              </div>
+              <div style={{height:6, background:'rgba(255,255,255,0.1)', borderRadius:3, overflow:'hidden'}}>
+                <div style={{width:'100%', height:'100%', background:'#fbbf24', borderRadius:3}}/>
+              </div>
+            </div>
+            
+            <div style={{flex:1}}>
+              <p style={{fontSize:'.7rem', fontWeight:800, textTransform:'uppercase', color:'#94a3b8', marginBottom:'.5rem', letterSpacing:'.05em'}}>Adit Pay Fees</p>
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'.4rem'}}>
+                <span style={{fontSize:'1.1rem', fontWeight:800}}>${fmt(result.adit_total_fee)} <span style={{fontSize:'.75rem', color:'#94a3b8', fontWeight:600}}>({fmt(result.adit_avg_fee_pct)}%)</span></span>
+              </div>
+              <div style={{height:6, background:'rgba(255,255,255,0.1)', borderRadius:3, overflow:'hidden'}}>
+                <div style={{width:`${Math.max(10, 100 - result.diff_pct)}%`, height:'100%', background:'#34d399', borderRadius:3}}/>
+              </div>
+            </div>
+          </div>
+
+          <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'1rem'}}>
+            <div style={{background:'rgba(255,255,255,0.04)', borderRadius:12, padding:'1rem', textAlign:'center'}}>
+              <p style={{fontSize:'1.2rem', fontWeight:800, color:'#34d399'}}>${fmt(result.savings_1_yr, 0)}</p>
+              <p style={{fontSize:'.7rem', fontWeight:800, textTransform:'uppercase', color:'#94a3b8', letterSpacing:'.05em', marginTop:'.2rem'}}>1 Year Savings</p>
+            </div>
+            <div style={{background:'rgba(255,255,255,0.04)', borderRadius:12, padding:'1rem', textAlign:'center'}}>
+              <p style={{fontSize:'1.2rem', fontWeight:800, color:'#34d399'}}>${fmt(result.savings_3_yr, 0)}</p>
+              <p style={{fontSize:'.7rem', fontWeight:800, textTransform:'uppercase', color:'#94a3b8', letterSpacing:'.05em', marginTop:'.2rem'}}>3 Years Savings</p>
+            </div>
+            <div style={{background:'rgba(255,255,255,0.04)', borderRadius:12, padding:'1rem', textAlign:'center'}}>
+              <p style={{fontSize:'1.2rem', fontWeight:800, color:'#34d399'}}>${fmt(result.savings_5_yr, 0)}</p>
+              <p style={{fontSize:'.7rem', fontWeight:800, textTransform:'uppercase', color:'#94a3b8', letterSpacing:'.05em', marginTop:'.2rem'}}>5 Years Savings</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Navy Summary Bar */}
+        <div style={{background:T.navy, borderRadius:16, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1.5rem 2rem', marginBottom:'2rem', color:'#fff'}}>
+          <div>
+            <p style={{fontSize:'.75rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em'}}>Total Volume</p>
+            <p style={{fontSize:'1.5rem', fontWeight:900, marginTop:'.2rem'}}>${fmt(result.total_amount)}</p>
+          </div>
+          <div>
+            <p style={{fontSize:'.75rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em'}}>Transactions</p>
+            <p style={{fontSize:'1.5rem', fontWeight:900, marginTop:'.2rem'}}>{fmt(result.total_count, 0)}</p>
+          </div>
+          <div>
+            <p style={{fontSize:'.75rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em'}}>Fees Paid</p>
+            <p style={{fontSize:'1.5rem', fontWeight:900, color:'#fbbf24', marginTop:'.2rem'}}>${fmt(result.total_fees_paid)}</p>
+          </div>
+          <div>
+            <p style={{fontSize:'.75rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em'}}>Avg Fee %</p>
+            <p style={{fontSize:'1.5rem', fontWeight:900, color:'#fbbf24', marginTop:'.2rem'}}>{fmt(result.existing_avg_fee_pct)}%</p>
+          </div>
+          <div>
+            <p style={{fontSize:'.75rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em'}}>Adit Pay Fees</p>
+            <p style={{fontSize:'1.5rem', fontWeight:900, color:'#34d399', marginTop:'.2rem'}}>${fmt(result.adit_total_fee)}</p>
+          </div>
+          <div>
+            <p style={{fontSize:'.75rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em'}}>Monthly Savings</p>
+            <p style={{fontSize:'1.5rem', fontWeight:900, color:'#34d399', marginTop:'.2rem'}}>${fmt(result.savings)}</p>
+          </div>
+        </div>
+
+        {/* Existing Merchant Table */}
+        <div style={{border:'1px solid #e2e8f0', borderRadius:16, marginBottom:'2rem', overflow:'hidden'}}>
+          <div style={{background:'#f8fafc', padding:'1rem 1.5rem', borderBottom:'1px solid #e2e8f0', display:'flex', alignItems:'center', gap:'.5rem'}}>
+            <FileText size={16} color="#64748b"/>
+            <span style={{fontSize:'.9rem', fontWeight:800, color:T.navy}}>Existing Merchant</span>
+          </div>
+          <table style={ltbl}>
+            <thead><tr><ThL>Merchant</ThL><ThL>Trn Amt</ThL><ThL>Count</ThL><ThL>Fee Paid</ThL><ThL>Avg %</ThL><ThL>% of Trn</ThL></tr></thead>
             <tbody>
-              {result.adit_rows.map((row,i)=>(
-                <tr key={i} style={{background:i%2===0?'rgba(255,255,255,.03)':'transparent'}}>
-                  <Td>{row.type}</Td><Td>{fmtC(row.amount)}</Td><Td>{fmt(row.count,1)}</Td>
-                  <Td>{fmtC(row.trn_fee)}</Td><Td>{fmtC(row.auth_fee)}</Td>
-                  <Td bold teal>{fmtC(row.total_fee)}</Td>
-                  <Td><span style={{background:'rgba(0,200,180,.12)',color:T.teal,borderRadius:100,
-                    padding:'2px 10px',fontSize:'.78rem',fontWeight:700}}>{row.rate_label}</span></Td>
-                  <Td>—</Td>
+              <tr><TdL bold>{result.existing_merchant}</TdL><TdL>${fmt(result.total_amount)}</TdL><TdL>{fmt(result.total_count, 0)}</TdL><TdL bold color="#d97706">${fmt(result.total_fees_paid)}</TdL><TdL>{fmt(result.existing_avg_fee_pct)}%</TdL><TdL>100%</TdL></tr>
+              <tr style={{background:'#f8fafc'}}><TdL bold>Total</TdL><TdL bold>${fmt(result.total_amount)}</TdL><TdL bold>{fmt(result.total_count, 0)}</TdL><TdL bold color="#d97706">${fmt(result.total_fees_paid)}</TdL><TdL>—</TdL><TdL bold>100%</TdL></tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Adit Pay Table */}
+        <div style={{border:'1px solid #e2e8f0', borderRadius:16, marginBottom:'2rem', overflow:'hidden'}}>
+          <div style={{background:'#f59e0b', padding:'1rem 1.5rem', borderBottom:'1px solid #e2e8f0', display:'flex', alignItems:'center', gap:'.5rem'}}>
+            <Sparkles size={16} color="#fff"/>
+            <span style={{fontSize:'.9rem', fontWeight:800, color:'#fff'}}>Adit Pay</span>
+          </div>
+          <table style={ltbl}>
+            <thead><tr><ThL>Type</ThL><ThL>Trn Amt</ThL><ThL>Count</ThL><ThL>Fee Paid</ThL><ThL>Rate</ThL><ThL>% of Trn</ThL></tr></thead>
+            <tbody>
+              {result.adit_rows.map((r,i)=>(
+                <tr key={i} style={{borderBottom:'1px solid #f1f5f9'}}>
+                  <TdL>{r.type}</TdL>
+                  <TdL>${fmt(r.amount)}</TdL>
+                  <TdL>{fmt(r.count, 1)}</TdL>
+                  <TdL>${fmt(r.total_fee)}</TdL>
+                  <TdL>{r.rate_label}</TdL>
+                  <TdL>{i===0?'90%':'10%'}</TdL>
                 </tr>
               ))}
-              <tr style={{background:'rgba(0,200,180,.06)',borderTop:'1px solid rgba(0,200,180,.2)'}}>
-                <Td bold teal>Total</Td><Td bold>{fmtC(result.total_amount)}</Td>
-                <Td bold>{fmt(result.total_count,0)}</Td><Td>—</Td><Td>—</Td>
-                <Td bold teal>{fmtC(result.adit_total_fee)}</Td>
-                <Td bold>{fmtP(result.adit_avg_fee_pct)}</Td><Td bold>100%</Td>
+              <tr style={{background:'#f8fafc'}}>
+                <TdL bold>Total</TdL>
+                <TdL bold>${fmt(result.total_amount)}</TdL>
+                <TdL bold>{fmt(result.total_count, 0)}</TdL>
+                <TdL bold color="#059669">${fmt(result.adit_total_fee)}</TdL>
+                <TdL bold>{fmt(result.adit_avg_fee_pct)}%</TdL>
+                <TdL bold>100%</TdL>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
 
-      <div style={{borderRadius:14,padding:'1.25rem 1.5rem',
-        background:pos?'rgba(16,185,129,.1)':'rgba(239,68,68,.1)',
-        border:`1px solid ${pos?'rgba(16,185,129,.3)':'rgba(239,68,68,.3)'}`,
-        display:'flex',alignItems:'center',gap:'1rem'}}>
-        <div style={{width:44,height:44,borderRadius:12,flexShrink:0,
-          background:pos?'rgba(16,185,129,.2)':'rgba(239,68,68,.2)',
-          display:'flex',alignItems:'center',justifyContent:'center'}}>
-          {pos?<CheckCircle2 size={22} color={T.success}/>:<AlertCircle size={22} color={T.danger}/>}
+        {/* Hero Savings Block */}
+        <div style={{background:pos ? '#ecfdf5' : '#fef2f2', border:pos ? '1px solid #a7f3d0' : '1px solid #fecaca', borderRadius:16, padding:'2.5rem', display:'flex', justifyContent:'space-between', alignItems:'flex-end'}}>
+          <div>
+            <p style={{fontSize:'.85rem', fontWeight:800, textTransform:'uppercase', color:pos ? '#059669' : '#b91c1c', letterSpacing:'.05em'}}>
+              Total {pos ? 'Savings' : 'Cost'} with Adit Pay
+            </p>
+            <p style={{fontSize:'4.5rem', fontWeight:900, color:pos ? '#059669' : '#b91c1c', lineHeight:1, marginTop:'.5rem', letterSpacing:'-.03em'}}>
+              ${fmt(Math.abs(result.savings))}
+            </p>
+            <p style={{fontSize:'.95rem', color:pos ? '#059669' : '#b91c1c', fontWeight:600, marginTop:'.5rem'}}>
+              this month • ${fmt(Math.abs(result.savings_1_yr))} annually
+            </p>
+          </div>
+          <div style={{textAlign:'right'}}>
+            <div style={{display:'flex', justifyContent:'space-between', gap:'4rem', marginBottom:'.75rem'}}>
+              <span style={{fontSize:'.9rem', color:'#475569', fontWeight:600}}>Annual projection</span>
+              <span style={{fontSize:'.95rem', fontWeight:800, color:T.navy}}>${fmt(result.savings_1_yr)}</span>
+            </div>
+            <div style={{display:'flex', justifyContent:'space-between', gap:'4rem', marginBottom:'.75rem'}}>
+              <span style={{fontSize:'.9rem', color:'#475569', fontWeight:600}}>Fee reduction</span>
+              <span style={{fontSize:'.95rem', fontWeight:800, color:T.navy}}>{fmt(result.diff_pct)}% less</span>
+            </div>
+            <div style={{display:'flex', justifyContent:'space-between', gap:'4rem', marginBottom:'.75rem'}}>
+              <span style={{fontSize:'.9rem', color:'#475569', fontWeight:600}}>Existing rate</span>
+              <span style={{fontSize:'.95rem', fontWeight:800, color:T.navy}}>{fmt(result.existing_avg_fee_pct)}%</span>
+            </div>
+            <div style={{display:'flex', justifyContent:'space-between', gap:'4rem'}}>
+              <span style={{fontSize:'.9rem', color:'#475569', fontWeight:600}}>Adit Pay rate</span>
+              <span style={{fontSize:'.95rem', fontWeight:800, color:T.navy}}>{fmt(result.adit_avg_fee_pct)}%</span>
+            </div>
+          </div>
         </div>
-        <div>
-          <p style={{fontWeight:800,fontSize:'1.05rem',color:pos?T.success:T.danger,fontFamily:'var(--font-head)'}}>
-            {pos?`Total savings with Adit Pay: ${fmtC(result.savings)}`
-               :`Adit Pay costs ${fmtC(Math.abs(result.savings))} more in this scenario`}
-          </p>
-          <p style={{fontSize:'.8rem',color:T.muted,marginTop:'.2rem'}}>
-            Current fees {fmtC(result.total_fees_paid)} → Adit Pay fees {fmtC(result.adit_total_fee)}
-          </p>
-        </div>
+
       </div>
     </div>
   )
 }
 
-const tblStyle={width:'100%',borderCollapse:'collapse',fontSize:'.84rem',
-  border:`1px solid ${T.border}`,borderRadius:12}
-const Th=({children})=>(
-  <th style={{background:'rgba(255,255,255,.06)',color:T.muted,padding:'.55rem .85rem',
-    textAlign:'left',fontWeight:700,fontSize:'.72rem',textTransform:'uppercase',
-    letterSpacing:'.06em',whiteSpace:'nowrap',fontFamily:'var(--font-head)',
-    borderBottom:`1px solid ${T.border}`}}>{children}</th>)
-const Td=({children,bold,teal})=>(
-  <td style={{padding:'.5rem .85rem',borderBottom:'1px solid rgba(255,255,255,.05)',
-    whiteSpace:'nowrap',color:teal?T.teal:T.white,fontWeight:bold?700:400}}>{children}</td>)
+const ltbl = { width:'100%', borderCollapse:'collapse', fontSize:'.9rem', textAlign:'left' }
+const ThL = ({children}) => <th style={{padding:'1rem 1.5rem', color:'#64748b', fontWeight:800, fontSize:'.75rem', textTransform:'uppercase', letterSpacing:'.05em', borderBottom:'1px solid #e2e8f0'}}>{children}</th>
+const TdL = ({children, bold, color}) => <td style={{padding:'1rem 1.5rem', color: color || T.navy, fontWeight: bold ? 800 : 500, fontFamily:'monospace', fontSize:'.95rem'}}>{children}</td>
 
 // ── User avatar / dropdown ────────────────────────────────────────────────────
 function UserMenu({user}) {
@@ -604,7 +706,7 @@ export default function App() {
         {result&&(
           <GlassCard id="results-anchor">
             <SectionLabel icon={BarChart3}>Step 3 — Comparison Results</SectionLabel>
-            <ResultsTable result={result}/>
+            <AnalysisDashboard result={result}/>
           </GlassCard>
         )}
 

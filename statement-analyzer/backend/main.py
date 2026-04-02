@@ -145,7 +145,44 @@ def extract_pdf(data):
     return text
 
 def parse_statement(raw):
-    return {"raw_text": raw[:2000]}
+    raw_lower = raw.lower()
+    extracted = {
+        "merchant": "",
+        "total_amount": "",
+        "total_count": "",
+        "total_fees": "",
+        "raw_text": raw[:2000]
+    }
+
+    # 1. Merchant Name Heuristic: Often in the first 3 lines
+    lines = [L.strip() for L in raw.split("\n") if L.strip()][:10]
+    for line in lines:
+        if len(line) > 3 and not re.search(r'\d', line):
+            extracted["merchant"] = line
+            break
+
+    # 2. Total Amount (Gross Sales, Net Sales, Volume)
+    amount_match = re.search(r'(?i)(?:gross\s+sales|net\s+sales|total\s+volume|amount\s+processed|total\s+sales)[^\d]*\$?([\d,]+\.\d{2})', raw)
+    if amount_match:
+        extracted["total_amount"] = amount_match.group(1).replace(",", "")
+    else:
+        # Fallback: largest number that looks like currency in the text
+        amounts = re.findall(r'\$\s?([\d,]+\.\d{2})', raw)
+        if amounts:
+            floats = [float(a.replace(",", "")) for a in amounts]
+            extracted["total_amount"] = str(max(floats))
+
+    # 3. Transaction Count
+    count_match = re.search(r'(?i)(?:total\s+items|transaction\s+count|sales\s+count|number\s+of\s+sales|item\s+count)[^\d]*(\d+)', raw)
+    if count_match:
+        extracted["total_count"] = count_match.group(1)
+
+    # 4. Total Fees Paid
+    fees_match = re.search(r'(?i)(?:total\s+fees|fees\s+charged|amount\s+due|total\s+charges)[^\d]*\$?([\d,]+\.\d{2})', raw)
+    if fees_match:
+        extracted["total_fees"] = fees_match.group(1).replace(",", "")
+
+    return extracted
 
 # ── API Routes ─────────────────────────────────────────────────────────────────
 @app.get("/")
@@ -178,6 +215,13 @@ async def calculate_savings(req: CalculateRequest, user=Depends(get_current_user
     cp["rate_label"] = f"{ADIT_RATE_CP*100}% + ${ADIT_AUTH_CP}"
     op["rate_label"] = f"{ADIT_RATE_ONL*100}% + ${ADIT_AUTH_ONL}"
 
+    monthly_savings = req.total_fees_paid - adit_total
+    
+    # Generate AI Summary text
+    diff_pct = (monthly_savings / req.total_fees_paid) * 100 if req.total_fees_paid > 0 else 0
+    merchant_display = req.existing_merchant.upper() if req.existing_merchant else "MERCHANT"
+    ai_summary = f"{merchant_display} currently pays ${req.total_fees_paid:,.2f}/month to their existing processor at a {existing_avg_fee_pct:.2f}% effective rate. Switching to Adit Pay's flat-rate pricing brings that down to ${adit_total:,.2f}/month — a {diff_pct:.1f}% reduction worth ${monthly_savings:,.2f}/month in real cash back to the practice."
+
     return {
         "existing_merchant": req.existing_merchant,
         "total_amount": req.total_amount,
@@ -186,7 +230,12 @@ async def calculate_savings(req: CalculateRequest, user=Depends(get_current_user
         "existing_avg_fee_pct": existing_avg_fee_pct,
         "adit_total_fee": round(adit_total, 2),
         "adit_avg_fee_pct": adit_avg_fee_pct,
-        "savings": round(req.total_fees_paid - adit_total, 2),
+        "savings": round(monthly_savings, 2),
+        "savings_1_yr": round(monthly_savings * 12, 2),
+        "savings_3_yr": round(monthly_savings * 36, 2),
+        "savings_5_yr": round(monthly_savings * 60, 2),
+        "diff_pct": round(diff_pct, 2),
+        "ai_summary": ai_summary,
         "adit_rows": [cp, op]
     }
 
