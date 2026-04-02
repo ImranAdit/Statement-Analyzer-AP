@@ -12,8 +12,8 @@ import io, re, os, secrets
 app = FastAPI(title="Adit Pay Statement Analyser")
 
 # ── CONSTANTS (HARDCODED FOR STABILITY) ────────────────────────────────────────
-FRONTEND_URL = "https://statement-analyzer-frontend.onrender.com"
-APP_BASE_URL = "https://statement-analyzer-ap.onrender.com"
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://statement-analyzer-frontend.onrender.com")
+APP_BASE_URL = os.getenv("APP_BASE_URL", "https://statement-analyzer-1-0.onrender.com")
 
 SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_hex(32))
 
@@ -148,11 +148,47 @@ def parse_statement(raw):
     return {"raw_text": raw[:2000]}
 
 # ── API Routes ─────────────────────────────────────────────────────────────────
+@app.get("/")
+async def root():
+    return {"message": "Statement Analyzer API is running"}
+
 @app.post("/api/upload")
 async def upload_statement(file: UploadFile = File(...), user=Depends(get_current_user)):
     data = await file.read()
     raw = extract_pdf(data)
     return {"extracted": parse_statement(raw)}
+
+class CalculateRequest(BaseModel):
+    existing_merchant: str
+    total_amount: float
+    total_count: float
+    total_fees_paid: float
+    card_present_pct: float
+
+@app.post("/api/calculate")
+async def calculate_savings(req: CalculateRequest, user=Depends(get_current_user)):
+    card_present_pct = req.card_present_pct / 100.0
+    cp = calc_cp(req.total_amount * card_present_pct, req.total_count * card_present_pct)
+    op = calc_online(req.total_amount * (1 - card_present_pct), req.total_count * (1 - card_present_pct))
+    adit_total = cp["total_fee"] + op["total_fee"]
+    
+    existing_avg_fee_pct = (req.total_fees_paid / req.total_amount) * 100 if req.total_amount > 0 else 0
+    adit_avg_fee_pct = (adit_total / req.total_amount) * 100 if req.total_amount > 0 else 0
+
+    cp["rate_label"] = f"{ADIT_RATE_CP*100}% + ${ADIT_AUTH_CP}"
+    op["rate_label"] = f"{ADIT_RATE_ONL*100}% + ${ADIT_AUTH_ONL}"
+
+    return {
+        "existing_merchant": req.existing_merchant,
+        "total_amount": req.total_amount,
+        "total_count": req.total_count,
+        "total_fees_paid": req.total_fees_paid,
+        "existing_avg_fee_pct": existing_avg_fee_pct,
+        "adit_total_fee": round(adit_total, 2),
+        "adit_avg_fee_pct": adit_avg_fee_pct,
+        "savings": round(req.total_fees_paid - adit_total, 2),
+        "adit_rows": [cp, op]
+    }
 
 # ── SPA Serve (optional) ───────────────────────────────────────────────────────
 FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
