@@ -71,13 +71,13 @@ async def auth_callback(request: Request):
         "name":    user_info.get("name", email.split("@")[0]),
         "picture": user_info.get("picture", ""),
     }
-    return RedirectResponse(url="/")
+    return RedirectResponse(url="https://statement-analyzer-ap-1.onrender.com/")
 
 
 @app.get("/auth/logout")
 async def logout(request: Request):
     request.session.clear()
-    return RedirectResponse(url="/")
+    return RedirectResponse(url="https://statement-analyzer-ap-1.onrender.com/")
 
 
 @app.get("/api/me")
