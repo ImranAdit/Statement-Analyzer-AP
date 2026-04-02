@@ -7,7 +7,7 @@ from authlib.integrations.starlette_client import OAuth
 from pydantic import BaseModel
 import pdfplumber, pytesseract
 from PIL import Image
-import io, re, os, secrets, sqlite3
+import io, re, os, secrets, sqlite3, json, httpx
 
 def init_db():
     conn = sqlite3.connect("db.sqlite")
@@ -161,8 +161,7 @@ def extract_pdf(data):
                 text += t + "\n"
     return text
 
-def parse_statement(raw):
-    raw_lower = raw.lower()
+async def parse_statement(raw):
     extracted = {
         "merchant": "",
         "total_amount": "",
@@ -171,36 +170,41 @@ def parse_statement(raw):
         "raw_text": raw[:2000]
     }
 
-    # 1. Merchant Name Heuristic: Often in the first 3 lines
-    lines = [L.strip() for L in raw.split("\n") if L.strip()][:10]
-    for line in lines:
-        if len(line) > 3 and not re.search(r'\d', line):
-            extracted["merchant"] = line
-            break
-
-    # 2. Total Amount (Gross Sales, Net Sales, Volume)
-    amount_match = re.search(r'(?i)(?:gross\s+sales|net\s+sales|total\s+volume|amount\s+processed|total\s+sales|total\s+deposits|total\s+settlement|batch\s+total|total\s+amount|total\s+bankcard\s+sales|total)[^\d]*\$?([\d,]+\.\d{2})', raw)
-    if amount_match:
-        extracted["total_amount"] = amount_match.group(1).replace(",", "")
-    else:
-        # Fallback: largest number that looks like currency in the text
-        amounts = re.findall(r'\$\s?([\d,]+\.\d{2})', raw)
-        if amounts:
-            floats = [float(a.replace(",", "")) for a in amounts]
-            valid_floats = [f for f in floats if f < 1000000] # avoid parsing rogue account numbers
-            if valid_floats:
-                extracted["total_amount"] = str(max(valid_floats))
-
-    # 3. Transaction Count
-    count_match = re.search(r'(?i)(?:total\s+items|transaction\s+count|sales\s+count|number\s+of\s+sales|item\s+count|count|items|transactions|total\s+transactions)[^\d]*(\d+)', raw)
-    if count_match:
-        extracted["total_count"] = count_match.group(1)
-
-    # 4. Total Fees Paid
-    fees_match = re.search(r'(?i)(?:total\s+fees|fees\s+charged|amount\s+due|total\s+charges|fees|total\s+amount\s+due|fee\s+summary|total\s+deductions)[^\d]*\$?([\d,]+\.\d{2})', raw)
-    if fees_match:
-        extracted["total_fees"] = fees_match.group(1).replace(",", "")
-
+    api_key = os.getenv("GEMINI_API_KEY", "AIzaSyCJB3XbIbel0cot_SR24B59VtBWmp4ssh4")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    
+    prompt = """
+    You are a financial analyst OCR data extraction tool.
+    Extract the following from this messy credit card processing statement text:
+    - merchant_name (string)
+    - total_amount_processed (float)
+    - total_transactions_count (integer)
+    - total_fees_paid (float)
+    
+    Return ONLY a raw JSON object. Do not include markdown formatting. 
+    If a value is truly missing or impossible to find, use null.
+    """
+    
+    payload = {
+        "contents": [{"parts": [{"text": prompt + "\n\nTEXT:\n" + raw[:20000]}]}],
+        "generationConfig": {"responseMimeType": "application/json"}
+    }
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(url, json=payload, timeout=20.0)
+            data = resp.json()
+            
+            text_resp = data["candidates"][0]["content"]["parts"][0]["text"]
+            ai_data = json.loads(text_resp)
+            
+            if ai_data.get("merchant_name"): extracted["merchant"] = str(ai_data["merchant_name"])
+            if ai_data.get("total_amount_processed") is not None: extracted["total_amount"] = str(ai_data["total_amount_processed"])
+            if ai_data.get("total_transactions_count") is not None: extracted["total_count"] = str(ai_data["total_transactions_count"])
+            if ai_data.get("total_fees_paid") is not None: extracted["total_fees"] = str(ai_data["total_fees_paid"])
+    except Exception as e:
+        print(f"Gemini AI Parsing failed: {e}")
+        
     return extracted
 
 # ── API Routes ─────────────────────────────────────────────────────────────────
@@ -212,7 +216,8 @@ async def root():
 async def upload_statement(file: UploadFile = File(...), user=Depends(get_current_user)):
     data = await file.read()
     raw = extract_pdf(data)
-    return {"extracted": parse_statement(raw)}
+    extracted = await parse_statement(raw)
+    return {"extracted": extracted}
 
 class CalculateRequest(BaseModel):
     existing_merchant: str
