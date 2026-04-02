@@ -7,8 +7,25 @@ from authlib.integrations.starlette_client import OAuth
 from pydantic import BaseModel
 import pdfplumber, pytesseract
 from PIL import Image
-import io, re, os, secrets
+import io, re, os, secrets, sqlite3
 
+def init_db():
+    conn = sqlite3.connect("db.sqlite")
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS analysis_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_email TEXT,
+                    merchant TEXT,
+                    total_amount REAL,
+                    total_fees_paid REAL,
+                    savings REAL,
+                    diff_pct REAL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )''')
+    conn.commit()
+    conn.close()
+
+init_db()
 app = FastAPI(title="Adit Pay Statement Analyser")
 
 # ── CONSTANTS (HARDCODED FOR STABILITY) ────────────────────────────────────────
@@ -173,7 +190,7 @@ def parse_statement(raw):
             extracted["total_amount"] = str(max(floats))
 
     # 3. Transaction Count
-    count_match = re.search(r'(?i)(?:total\s+items|transaction\s+count|sales\s+count|number\s+of\s+sales|item\s+count)[^\d]*(\d+)', raw)
+    count_match = re.search(r'(?i)(?:total\s+items|transaction\s+count|sales\s+count|number\s+of\s+sales|item\s+count|count|items)[^\d]*(\d+)', raw)
     if count_match:
         extracted["total_count"] = count_match.group(1)
 
@@ -222,6 +239,14 @@ async def calculate_savings(req: CalculateRequest, user=Depends(get_current_user
     merchant_display = req.existing_merchant.upper() if req.existing_merchant else "MERCHANT"
     ai_summary = f"{merchant_display} currently pays ${req.total_fees_paid:,.2f}/month to their existing processor at a {existing_avg_fee_pct:.2f}% effective rate. Switching to Adit Pay's flat-rate pricing brings that down to ${adit_total:,.2f}/month — a {diff_pct:.1f}% reduction worth ${monthly_savings:,.2f}/month in real cash back to the practice."
 
+    # Save to history DB
+    conn = sqlite3.connect("db.sqlite")
+    c = conn.cursor()
+    c.execute("INSERT INTO analysis_history (user_email, merchant, total_amount, total_fees_paid, savings, diff_pct) VALUES (?, ?, ?, ?, ?, ?)",
+              (user.get("email", "anonymous"), req.existing_merchant or "Unnamed Merchant", req.total_amount, req.total_fees_paid, monthly_savings, diff_pct))
+    conn.commit()
+    conn.close()
+
     return {
         "existing_merchant": req.existing_merchant,
         "total_amount": req.total_amount,
@@ -238,6 +263,20 @@ async def calculate_savings(req: CalculateRequest, user=Depends(get_current_user
         "ai_summary": ai_summary,
         "adit_rows": [cp, op]
     }
+
+@app.get("/api/history")
+def get_history(request: Request):
+    user = request.session.get("user")
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    conn = sqlite3.connect("db.sqlite")
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT * FROM analysis_history WHERE user_email = ? ORDER BY created_at DESC", (user["email"],))
+    rows = [dict(row) for row in c.fetchall()]
+    conn.close()
+    return {"history": rows}
 
 # ── SPA Serve (optional) ───────────────────────────────────────────────────────
 FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")

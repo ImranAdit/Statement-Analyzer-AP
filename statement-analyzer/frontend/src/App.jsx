@@ -3,113 +3,83 @@ import {
   Upload, FileText, Calculator, CheckCircle2, AlertCircle,
   ChevronDown, ChevronUp, Pencil, RefreshCw, TrendingDown,
   DollarSign, Hash, Percent, Sparkles, ArrowRight, BarChart3,
-  LogOut, Lock, ShieldCheck
+  LogOut, Lock, ShieldCheck, LayoutDashboard, Search
 } from 'lucide-react'
+
 const API = import.meta.env.VITE_API_URL || 'https://statement-analyzer-ap.onrender.com'
 
 const fmt  = (n, d=2) => n==null ? '—' : Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})
 const fmtC = n => n==null ? '—' : '$'+fmt(n)
 const fmtP = n => n==null ? '—' : fmt(n,4)+'%'
 
+// ── Light Theme Tokens ────────────────────────────────────────────────────────
 const T = {
-  navy:'#0a1628', navyMid:'#0f2044', navyLight:'#162d5a',
-  teal:'#00c8b4', tealDim:'#00a896', blue:'#2563eb',
-  white:'#ffffff', muted:'#94a3b8',
-  border:'rgba(255,255,255,.1)', card:'rgba(255,255,255,.05)',
-  success:'#10b981', danger:'#ef4444',
-  grad:'linear-gradient(135deg,#00c8b4 0%,#2563eb 100%)',
+  bg: '#f8fafc',
+  card: '#ffffff',
+  navy: '#0f172a',
+  navyMid: '#1e293b',
+  text: '#334155',
+  muted: '#64748b',
+  border: '#e2e8f0',
+  teal: '#00c8b4',
+  tealDark: '#00a896',
+  blue: '#2563eb',
+  success: '#10b981',
+  danger: '#ef4444',
+  grad: 'linear-gradient(135deg, #00c8b4 0%, #2563eb 100%)',
 }
 
-// ── Design atoms ──────────────────────────────────────────────────────────────
-
-function GlassCard({children,style,id}) {
+// ── Shared UI Components ──────────────────────────────────────────────────────
+function Card({children,style,id}) {
   return (
-    <div id={id} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:18,
-      backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',padding:'1.75rem',...style}}>
+    <div id={id} style={{background:T.card, border:`1px solid ${T.border}`, borderRadius:16, 
+      boxShadow:'0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.02)', padding:'2rem', ...style}}>
       {children}
     </div>
   )
 }
 
-function TealBadge({children}) {
+function SectionTitle({icon:Icon,children}) {
   return (
-    <span style={{display:'inline-flex',alignItems:'center',gap:6,
-      background:'rgba(0,200,180,.12)',border:'1px solid rgba(0,200,180,.3)',
-      color:T.teal,borderRadius:100,padding:'4px 14px',
-      fontSize:'.72rem',fontWeight:700,letterSpacing:'.08em',
-      textTransform:'uppercase',fontFamily:'var(--font-head)'}}>
-      {children}
-    </span>
-  )
-}
-
-function SectionLabel({icon:Icon,children}) {
-  return (
-    <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1.25rem'}}>
-      <div style={{width:34,height:34,borderRadius:10,background:T.grad,
+    <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:'1.5rem'}}>
+      <div style={{width:36,height:36,borderRadius:10,background:'rgba(0,200,180,.1)',
         display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-        <Icon size={16} color="#fff"/>
+        <Icon size={18} color={T.teal}/>
       </div>
-      <span style={{fontFamily:'var(--font-head)',fontWeight:600,fontSize:'1rem',color:T.white}}>
+      <h2 style={{fontFamily:'var(--font-head)',fontWeight:700,fontSize:'1.1rem',color:T.navy}}>
         {children}
-      </span>
+      </h2>
     </div>
   )
 }
 
-function Field({label,value,onChange,type='text',step,suffix,prefix,hint}) {
-  const [hover,setHover]=useState(false)
+function Field({label,value,onChange,type='text',step,prefix,hint}) {
+  const [focus,setFocus]=useState(false)
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'.4rem'}}>
-      <label style={{fontSize:'.72rem',fontWeight:700,color:T.muted,
-        textTransform:'uppercase',letterSpacing:'.07em',fontFamily:'var(--font-head)'}}>
+      <label style={{fontSize:'.75rem',fontWeight:700,color:T.navyMid,
+        textTransform:'uppercase',letterSpacing:'.05em',fontFamily:'var(--font-head)'}}>
         {label}
       </label>
-      <div onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)}
-        style={{display:'flex',alignItems:'stretch',
-          border:`1px solid ${hover?'rgba(0,200,180,.4)':T.border}`,
-          borderRadius:10,overflow:'hidden',background:'rgba(255,255,255,.04)',transition:'border-color .2s'}}>
-        {prefix&&<span style={{padding:'0 .75rem',color:T.teal,fontWeight:700,fontSize:'.95rem',
-          borderRight:`1px solid ${T.border}`,background:'rgba(0,200,180,.08)',
+      <div style={{display:'flex',alignItems:'stretch',
+          border:`1px solid ${focus?T.teal:T.border}`,
+          borderRadius:10,overflow:'hidden',background:focus?'#fff':'#f8fafc',
+          transition:'all .2s', boxShadow: focus ? '0 0 0 3px rgba(0,200,180,.1)' : 'none'}}>
+        {prefix&&<span style={{padding:'0 .85rem',color:T.muted,fontWeight:600,fontSize:'.95rem',
+          borderRight:`1px solid ${T.border}`,background:'#f1f5f9',
           display:'flex',alignItems:'center'}}>{prefix}</span>}
         <input type={type} value={value} onChange={e=>onChange(e.target.value)} step={step}
-          style={{flex:1,border:'none',background:'transparent',padding:'.6rem .85rem',
-            fontSize:'.95rem',outline:'none',color:T.white,fontFamily:'var(--font-body)'}}/>
-        {suffix&&<span style={{padding:'0 .75rem',color:T.muted,fontSize:'.85rem',
-          borderLeft:`1px solid ${T.border}`,background:'rgba(255,255,255,.03)',
-          display:'flex',alignItems:'center'}}>{suffix}</span>}
+          onFocus={()=>setFocus(true)} onBlur={()=>setFocus(false)}
+          style={{flex:1,border:'none',background:'transparent',padding:'.7rem .85rem',
+            fontSize:'.95rem',outline:'none',color:T.navy,fontFamily:'var(--font-body)', fontWeight:500}}/>
       </div>
-      {hint&&<p style={{fontSize:'.72rem',color:T.muted,marginTop:'.1rem'}}>{hint}</p>}
+      {hint&&<p style={{fontSize:'.75rem',color:T.muted}}>{hint}</p>}
     </div>
   )
 }
 
-function StatBox({icon:Icon,label,value,accent=T.teal,delay=0}) {
-  return (
-    <div style={{animationDelay:`${delay}s`}}>
-      <div style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:14,
-        padding:'1.1rem 1.25rem',display:'flex',alignItems:'center',gap:'1rem',
-        position:'relative',overflow:'hidden'}}>
-        <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:accent}}/>
-        <div style={{width:40,height:40,borderRadius:10,flexShrink:0,
-          background:`linear-gradient(135deg,${accent}22,${accent}11)`,
-          border:`1px solid ${accent}33`,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <Icon size={18} color={accent}/>
-        </div>
-        <div>
-          <p style={{fontSize:'.7rem',fontWeight:700,color:T.muted,textTransform:'uppercase',
-            letterSpacing:'.07em',fontFamily:'var(--font-head)'}}>{label}</p>
-          <p style={{fontSize:'1.2rem',fontWeight:800,color:T.white,
-            fontFamily:'var(--font-head)',marginTop:1}}>{value}</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Login Page ─────────────────────────────────────────────────────────────────
+// ── Login Page ────────────────────────────────────────────────────────────────
 function LoginPage({error}) {
-  const [hovered,setHovered]=useState(false)
   const errMsg = error==='unauthorized_domain'
     ? 'Only @adit.com email addresses are allowed. Please sign in with your Adit work account.'
     : error==='auth_failed'
@@ -117,84 +87,53 @@ function LoginPage({error}) {
     : null
 
   return (
-    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',
-      alignItems:'center',justifyContent:'center',padding:'2rem',position:'relative'}}>
-
-      {/* Background glow */}
-      <div style={{position:'fixed',inset:0,pointerEvents:'none',
-        background:'radial-gradient(ellipse 60% 60% at 50% 40%,rgba(0,200,180,.1) 0%,transparent 70%)'}}/> 
-
-      <div style={{width:'100%',maxWidth:420,position:'relative',zIndex:1}}>
-
-        {/* Logo */}
-        <div style={{textAlign:'center',marginBottom:'2.5rem'}}>
-          <div style={{fontFamily:'var(--font-head)',fontWeight:800,fontSize:'2.2rem',
-            background:T.grad,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',
-            letterSpacing:'-.02em',marginBottom:'.5rem'}}>
-            Adit
-          </div>
-          <TealBadge><ShieldCheck size={11}/> Internal Tool</TealBadge>
+    <div style={{minHeight:'100vh',background:T.bg,display:'flex',flexDirection:'column',
+      alignItems:'center',justifyContent:'center',padding:'2rem'}}>
+      <div style={{width:'100%',maxWidth:440}}>
+        <div style={{textAlign:'center',marginBottom:'2rem'}}>
+          <img src="https://adit.com/storage/settings/logo.png" alt="Adit Logo" style={{height:40,marginBottom:'1rem'}} onError={(e)=>{e.target.style.display='none'}}/>
+          <h1 style={{fontFamily:'var(--font-head)',fontWeight:800,fontSize:'1.8rem',color:T.navy,letterSpacing:'-.02em'}}>
+            Statement Analyzer
+          </h1>
         </div>
 
-        {/* Card */}
-        <div style={{background:'rgba(255,255,255,.05)',border:`1px solid ${T.border}`,
-          borderRadius:20,backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',
-          padding:'2.25rem 2rem'}}>
-
-          <div style={{textAlign:'center',marginBottom:'1.75rem'}}>
-            <div style={{width:52,height:52,borderRadius:14,background:T.grad,
-              display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto .9rem'}}>
-              <Lock size={22} color="#fff"/>
+        <Card style={{padding:'2.5rem 2rem'}}>
+          <div style={{textAlign:'center',marginBottom:'2rem'}}>
+            <div style={{width:56,height:56,borderRadius:16,background:'rgba(37,99,235,.08)',
+              display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 1rem'}}>
+              <Lock size={24} color={T.blue}/>
             </div>
-            <h1 style={{fontFamily:'var(--font-head)',fontWeight:800,fontSize:'1.35rem',
-              color:T.white,letterSpacing:'-.01em',marginBottom:'.45rem'}}>
-              Sign in to continue
-            </h1>
-            <p style={{fontSize:'.85rem',color:T.muted,lineHeight:1.6}}>
-              This tool is restricted to Adit team members.<br/>
-              Sign in with your <span style={{color:T.teal,fontWeight:700}}>@adit.com</span> Google account.
+            <h2 style={{fontFamily:'var(--font-head)',fontWeight:700,fontSize:'1.2rem',color:T.navy,marginBottom:'.5rem'}}>
+              Internal Tool Access
+            </h2>
+            <p style={{fontSize:'.9rem',color:T.muted,lineHeight:1.6}}>
+              Sign in with your <strong style={{color:T.navy}}>@adit.com</strong> Google account.
             </p>
           </div>
 
           {errMsg&&(
-            <div style={{marginBottom:'1.25rem',display:'flex',gap:'.6rem',alignItems:'flex-start',
-              background:'rgba(239,68,68,.12)',border:'1px solid rgba(239,68,68,.25)',
-              borderRadius:10,padding:'.75rem 1rem',fontSize:'.83rem',color:'#fca5a5'}}>
-              <AlertCircle size={15} style={{flexShrink:0,marginTop:1}}/>
-              {errMsg}
+            <div style={{marginBottom:'1.5rem',display:'flex',gap:'.6rem',alignItems:'flex-start',
+              background:'#fef2f2',border:'1px solid #fecaca',borderRadius:12,padding:'1rem',fontSize:'.85rem',color:'#b91c1c'}}>
+              <AlertCircle size={16} style={{flexShrink:0,marginTop:2}}/> {errMsg}
             </div>
           )}
 
-          {/* Google SSO button */}
           <a href={`${API}/auth/login`}
-            onMouseEnter={()=>setHovered(true)}
-            onMouseLeave={()=>setHovered(false)}
             style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,
               width:'100%',padding:'.85rem',borderRadius:12,textDecoration:'none',
-              border:`1px solid ${hovered?'rgba(0,200,180,.5)':T.border}`,
-              background:hovered?'rgba(0,200,180,.1)':'rgba(255,255,255,.06)',
-              transition:'all .2s',cursor:'pointer'}}>
-            {/* Google icon */}
+              border:`1px solid ${T.border}`,background:'#fff',boxShadow:'0 1px 2px rgba(0,0,0,.05)',
+              transition:'all .2s',cursor:'pointer',color:T.navy,fontWeight:600}}
+            onMouseEnter={e=>e.currentTarget.style.background='#f8fafc'}
+            onMouseLeave={e=>e.currentTarget.style.background='#fff'}>
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            <span style={{fontFamily:'var(--font-head)',fontWeight:700,fontSize:'.92rem',color:T.white}}>
-              Continue with Google
-            </span>
+            Continue with Google
           </a>
-
-          <p style={{textAlign:'center',fontSize:'.72rem',color:T.muted,marginTop:'1.25rem',lineHeight:1.6}}>
-            Only <strong style={{color:T.teal}}>@adit.com</strong> accounts will be granted access.<br/>
-            Non-Adit accounts will be rejected automatically.
-          </p>
-        </div>
-
-        <p style={{textAlign:'center',fontSize:'.72rem',color:T.muted,marginTop:'1.25rem'}}>
-          © {new Date().getFullYear()} Adit Communications, Inc.
-        </p>
+        </Card>
       </div>
     </div>
   )
@@ -226,55 +165,53 @@ function UploadZone({onExtracted,setLoading,loading}) {
         onDragOver={e=>{e.preventDefault();setDrag(true)}}
         onDragLeave={()=>setDrag(false)}
         onDrop={e=>{e.preventDefault();setDrag(false);handleFile(e.dataTransfer.files[0])}}
-        style={{border:`2px dashed ${drag?T.teal:T.border}`,borderRadius:14,
-          padding:'2.75rem 1.5rem',textAlign:'center',cursor:'pointer',
-          background:drag?'rgba(0,200,180,.06)':'rgba(255,255,255,.02)',
-          transition:'all .25s',position:'relative',overflow:'hidden'}}>
-        {drag&&<div style={{position:'absolute',inset:0,pointerEvents:'none',
-          background:'radial-gradient(ellipse 60% 60% at 50% 50%,rgba(0,200,180,.08),transparent)'}}/>}
-        <div style={{width:56,height:56,borderRadius:16,margin:'0 auto 1rem',
-          background:drag?T.grad:'rgba(255,255,255,.06)',border:`1px solid ${drag?'transparent':T.border}`,
+        style={{border:`2px dashed ${drag?T.teal:T.border}`,borderRadius:16,
+          padding:'3rem 2rem',textAlign:'center',cursor:'pointer',
+          background:drag?'rgba(0,200,180,.03)':'#f8fafc',
+          transition:'all .2s'}}>
+        
+        <div style={{width:64,height:64,borderRadius:20,margin:'0 auto 1.25rem',
+          background:drag?T.grad:'#fff',border:`1px solid ${drag?'transparent':T.border}`,
+          boxShadow:drag?'0 10px 25px rgba(0,200,180,.2)':'0 4px 6px rgba(0,0,0,.02)',
           display:'flex',alignItems:'center',justifyContent:'center',transition:'all .25s'}}>
-          <Upload size={24} color={drag?'#fff':T.teal}/>
+          <Upload size={28} color={drag?'#fff':T.teal}/>
         </div>
+
         {fileName&&!loading ? (
-          <><p style={{fontWeight:700,fontSize:'1rem',color:T.teal,fontFamily:'var(--font-head)'}}>{fileName}</p>
-          <p style={{fontSize:'.82rem',color:T.muted,marginTop:'.35rem'}}>Extracted — review figures below ↓</p></>
+          <><p style={{fontWeight:800,fontSize:'1.1rem',color:T.navy,fontFamily:'var(--font-head)'}}>{fileName}</p>
+          <p style={{fontSize:'.9rem',color:T.success,marginTop:'.4rem',fontWeight:600}}>Extracted successfully ↓</p></>
         ) : loading ? (
-          <><p style={{fontWeight:700,color:T.white,fontFamily:'var(--font-head)'}}>Extracting data…</p>
-          <p style={{fontSize:'.82rem',color:T.muted,marginTop:'.35rem'}}>Running OCR on your statement</p></>
+          <><p style={{fontWeight:800,color:T.navy,fontSize:'1.1rem',fontFamily:'var(--font-head)'}}>Extracting data…</p>
+          <p style={{fontSize:'.9rem',color:T.muted,marginTop:'.4rem'}}>Running secure OCR</p></>
         ) : (
-          <><p style={{fontWeight:700,fontSize:'1rem',color:T.white,fontFamily:'var(--font-head)'}}>
-            Drop your bank statement here</p>
-          <p style={{fontSize:'.82rem',color:T.muted,marginTop:'.4rem'}}>
-            PDF or scanned image (PNG, JPG, TIFF) · Click to browse</p></>
+          <><p style={{fontWeight:800,fontSize:'1.1rem',color:T.navy,fontFamily:'var(--font-head)'}}>
+            Drop statement PDF here</p>
+          <p style={{fontSize:'.9rem',color:T.muted,marginTop:'.4rem'}}>
+            Click to browse for a PDF or image file.</p></>
         )}
         <input ref={ref} type="file" accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp,.webp"
           style={{display:'none'}} onChange={e=>handleFile(e.target.files[0])}/>
       </div>
+      
       {error&&(
-        <div style={{marginTop:'.85rem',display:'flex',gap:'.6rem',alignItems:'flex-start',
-          color:'#fca5a5',background:'rgba(239,68,68,.12)',border:'1px solid rgba(239,68,68,.25)',
-          borderRadius:10,padding:'.65rem 1rem',fontSize:'.85rem'}}>
+        <div style={{marginTop:'1rem',display:'flex',gap:'.6rem',alignItems:'flex-start',
+          color:'#b91c1c',background:'#fef2f2',border:'1px solid #fecaca',
+          borderRadius:12,padding:'1rem',fontSize:'.85rem'}}>
           <AlertCircle size={16} style={{flexShrink:0,marginTop:1}}/>{error}
         </div>
       )}
-      <p style={{fontSize:'.76rem',color:T.muted,textAlign:'center',marginTop:'1rem'}}>
-        No statement yet? Fill in the figures manually below ↓
-      </p>
     </div>
   )
 }
 
-// ── Analysis Dashboard (Step 3) ────────────────────────────────────────────────
+// ── Step 3: Analysis Dashboard (Re-themed from mockup) ─────────────────────────
 function AnalysisDashboard({result}) {
   const pos = result.savings >= 0
   const isStrong = result.diff_pct > 5
 
   return (
     <div style={{background:'#ffffff', borderRadius:16, border:`1px solid #e2e8f0`, overflow:'hidden', color:T.navy, fontFamily:'var(--font-head)'}}>
-      
-      {/* Dashboard Header */}
+      {/* Header */}
       <div style={{padding:'1.5rem 2rem', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
         <div>
           <h2 style={{fontSize:'1.4rem', fontWeight:900, textTransform:'uppercase', color:T.navy, letterSpacing:'.03em', marginBottom:'.2rem'}}>
@@ -362,10 +299,6 @@ function AnalysisDashboard({result}) {
             <p style={{fontSize:'1.5rem', fontWeight:900, color:'#fbbf24', marginTop:'.2rem'}}>${fmt(result.total_fees_paid)}</p>
           </div>
           <div>
-            <p style={{fontSize:'.75rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em'}}>Avg Fee %</p>
-            <p style={{fontSize:'1.5rem', fontWeight:900, color:'#fbbf24', marginTop:'.2rem'}}>{fmt(result.existing_avg_fee_pct)}%</p>
-          </div>
-          <div>
             <p style={{fontSize:'.75rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em'}}>Adit Pay Fees</p>
             <p style={{fontSize:'1.5rem', fontWeight:900, color:'#34d399', marginTop:'.2rem'}}>${fmt(result.adit_total_fee)}</p>
           </div>
@@ -375,7 +308,7 @@ function AnalysisDashboard({result}) {
           </div>
         </div>
 
-        {/* Existing Merchant Table */}
+        {/* Detailed Component Tables */}
         <div style={{border:'1px solid #e2e8f0', borderRadius:16, marginBottom:'2rem', overflow:'hidden'}}>
           <div style={{background:'#f8fafc', padding:'1rem 1.5rem', borderBottom:'1px solid #e2e8f0', display:'flex', alignItems:'center', gap:'.5rem'}}>
             <FileText size={16} color="#64748b"/>
@@ -385,16 +318,14 @@ function AnalysisDashboard({result}) {
             <thead><tr><ThL>Merchant</ThL><ThL>Trn Amt</ThL><ThL>Count</ThL><ThL>Fee Paid</ThL><ThL>Avg %</ThL><ThL>% of Trn</ThL></tr></thead>
             <tbody>
               <tr><TdL bold>{result.existing_merchant}</TdL><TdL>${fmt(result.total_amount)}</TdL><TdL>{fmt(result.total_count, 0)}</TdL><TdL bold color="#d97706">${fmt(result.total_fees_paid)}</TdL><TdL>{fmt(result.existing_avg_fee_pct)}%</TdL><TdL>100%</TdL></tr>
-              <tr style={{background:'#f8fafc'}}><TdL bold>Total</TdL><TdL bold>${fmt(result.total_amount)}</TdL><TdL bold>{fmt(result.total_count, 0)}</TdL><TdL bold color="#d97706">${fmt(result.total_fees_paid)}</TdL><TdL>—</TdL><TdL bold>100%</TdL></tr>
             </tbody>
           </table>
         </div>
 
-        {/* Adit Pay Table */}
         <div style={{border:'1px solid #e2e8f0', borderRadius:16, marginBottom:'2rem', overflow:'hidden'}}>
           <div style={{background:'#f59e0b', padding:'1rem 1.5rem', borderBottom:'1px solid #e2e8f0', display:'flex', alignItems:'center', gap:'.5rem'}}>
             <Sparkles size={16} color="#fff"/>
-            <span style={{fontSize:'.9rem', fontWeight:800, color:'#fff'}}>Adit Pay</span>
+            <span style={{fontSize:'.9rem', fontWeight:800, color:'#fff'}}>Adit Pay Target Pricing</span>
           </div>
           <table style={ltbl}>
             <thead><tr><ThL>Type</ThL><ThL>Trn Amt</ThL><ThL>Count</ThL><ThL>Fee Paid</ThL><ThL>Rate</ThL><ThL>% of Trn</ThL></tr></thead>
@@ -405,7 +336,7 @@ function AnalysisDashboard({result}) {
                   <TdL>${fmt(r.amount)}</TdL>
                   <TdL>{fmt(r.count, 1)}</TdL>
                   <TdL>${fmt(r.total_fee)}</TdL>
-                  <TdL>{r.rate_label}</TdL>
+                  <TdL><span style={{background:'#f1f5f9', padding:'4px 10px', borderRadius:100, fontSize:'.8rem', border:'1px solid #e2e8f0'}}>{r.rate_label}</span></TdL>
                   <TdL>{i===0?'90%':'10%'}</TdL>
                 </tr>
               ))}
@@ -434,24 +365,6 @@ function AnalysisDashboard({result}) {
               this month • ${fmt(Math.abs(result.savings_1_yr))} annually
             </p>
           </div>
-          <div style={{textAlign:'right'}}>
-            <div style={{display:'flex', justifyContent:'space-between', gap:'4rem', marginBottom:'.75rem'}}>
-              <span style={{fontSize:'.9rem', color:'#475569', fontWeight:600}}>Annual projection</span>
-              <span style={{fontSize:'.95rem', fontWeight:800, color:T.navy}}>${fmt(result.savings_1_yr)}</span>
-            </div>
-            <div style={{display:'flex', justifyContent:'space-between', gap:'4rem', marginBottom:'.75rem'}}>
-              <span style={{fontSize:'.9rem', color:'#475569', fontWeight:600}}>Fee reduction</span>
-              <span style={{fontSize:'.95rem', fontWeight:800, color:T.navy}}>{fmt(result.diff_pct)}% less</span>
-            </div>
-            <div style={{display:'flex', justifyContent:'space-between', gap:'4rem', marginBottom:'.75rem'}}>
-              <span style={{fontSize:'.9rem', color:'#475569', fontWeight:600}}>Existing rate</span>
-              <span style={{fontSize:'.95rem', fontWeight:800, color:T.navy}}>{fmt(result.existing_avg_fee_pct)}%</span>
-            </div>
-            <div style={{display:'flex', justifyContent:'space-between', gap:'4rem'}}>
-              <span style={{fontSize:'.9rem', color:'#475569', fontWeight:600}}>Adit Pay rate</span>
-              <span style={{fontSize:'.95rem', fontWeight:800, color:T.navy}}>{fmt(result.adit_avg_fee_pct)}%</span>
-            </div>
-          </div>
         </div>
 
       </div>
@@ -463,54 +376,106 @@ const ltbl = { width:'100%', borderCollapse:'collapse', fontSize:'.9rem', textAl
 const ThL = ({children}) => <th style={{padding:'1rem 1.5rem', color:'#64748b', fontWeight:800, fontSize:'.75rem', textTransform:'uppercase', letterSpacing:'.05em', borderBottom:'1px solid #e2e8f0'}}>{children}</th>
 const TdL = ({children, bold, color}) => <td style={{padding:'1rem 1.5rem', color: color || T.navy, fontWeight: bold ? 800 : 500, fontFamily:'monospace', fontSize:'.95rem'}}>{children}</td>
 
-// ── User avatar / dropdown ────────────────────────────────────────────────────
+// ── Global History Dashboard Tab ──────────────────────────────────────────────
+function HistoryDashboard() {
+  const [history, setHistory] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`${API}/api/history`, {credentials: 'include'})
+      .then(r => r.json())
+      .then(d => { setHistory(d.history || []); setLoading(false) })
+  }, [])
+
+  if (loading) return <div style={{textAlign:'center', padding:'4rem', color:T.muted}}>Loading history database...</div>
+  if (history.length === 0) return (
+    <Card style={{textAlign:'center', padding:'4rem 2rem'}}>
+      <Search size={48} color={T.border} style={{margin:'0 auto 1rem'}}/>
+      <h3 style={{fontSize:'1.2rem', fontWeight:800, color:T.navy}}>No analyses found</h3>
+      <p style={{color:T.muted, marginTop:'.5rem'}}>Upload a statement on the Analyzer tab to begin tracking history.</p>
+    </Card>
+  )
+
+  const wins = history.filter(h => h.savings >= 0)
+  const totalSavings = wins.reduce((acc, h) => acc + h.savings, 0)
+  const winRate = history.length > 0 ? (wins.length / history.length) * 100 : 0
+
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:'1.5rem'}}>
+      {/* Global KPIs */}
+      <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'1.5rem'}}>
+        <Card style={{padding:'1.75rem'}}>
+          <p style={{fontSize:'.8rem', fontWeight:800, color:T.muted, textTransform:'uppercase'}}>Total Pitches</p>
+          <p style={{fontSize:'2.5rem', fontWeight:900, color:T.navy, marginTop:'.2rem'}}>{history.length}</p>
+        </Card>
+        <Card style={{padding:'1.75rem'}}>
+          <p style={{fontSize:'.8rem', fontWeight:800, color:T.muted, textTransform:'uppercase'}}>Win Rate</p>
+          <p style={{fontSize:'2.5rem', fontWeight:900, color:T.blue, marginTop:'.2rem'}}>{fmt(winRate, 0)}%</p>
+        </Card>
+        <Card style={{padding:'1.75rem', background:'#ecfdf5', borderColor:'#a7f3d0'}}>
+          <p style={{fontSize:'.8rem', fontWeight:800, color:'#059669', textTransform:'uppercase'}}>Total Monthly Savings Found</p>
+          <p style={{fontSize:'2.5rem', fontWeight:900, color:'#059669', marginTop:'.2rem'}}>${fmt(totalSavings, 0)}</p>
+        </Card>
+      </div>
+
+      <Card style={{padding:0, overflow:'hidden'}}>
+        <div style={{padding:'1.5rem 2rem', borderBottom:`1px solid ${T.border}`}}>
+          <h3 style={{fontSize:'1.1rem', fontWeight:800, color:T.navy}}>Historical Log</h3>
+        </div>
+        <table style={ltbl}>
+          <thead>
+            <tr><ThL>Date</ThL><ThL>Merchant</ThL><ThL>Volume</ThL><ThL>Savings</ThL><ThL>Status</ThL></tr>
+          </thead>
+          <tbody>
+            {history.map(h => (
+              <tr key={h.id} style={{borderBottom:`1px solid ${T.border}`}}>
+                <TdL color={T.muted}>{new Date(h.created_at).toLocaleDateString()}</TdL>
+                <TdL bold>{h.merchant || 'Unknown'}</TdL>
+                <TdL>${fmt(h.total_amount)}</TdL>
+                <TdL bold color={h.savings >= 0 ? '#059669' : '#b91c1c'}>${fmt(h.savings)}</TdL>
+                <TdL>
+                  <span style={{
+                    padding:'4px 10px', borderRadius:100, fontSize:'.75rem', fontWeight:800,
+                    background: h.savings >= 0 ? '#ecfdf5' : '#fef2f2',
+                    color: h.savings >= 0 ? '#059669' : '#b91c1c'
+                  }}>
+                    {h.savings >= 0 ? 'WON' : 'FAILED'}
+                  </span>
+                </TdL>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+    </div>
+  )
+}
+
+// ── User Menu ─────────────────────────────────────────────────────────────────
 function UserMenu({user}) {
   const [open,setOpen]=useState(false)
-  const initials=user.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)
+  
   return (
     <div style={{position:'relative'}}>
-      <button onClick={()=>setOpen(o=>!o)}
-        style={{display:'flex',alignItems:'center',gap:8,background:'rgba(255,255,255,.08)',
-          border:`1px solid ${T.border}`,borderRadius:100,padding:'5px 10px 5px 5px',
-          cursor:'pointer',transition:'background .2s'}}
-        onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,.13)'}
-        onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,.08)'}>
-        {user.picture
-          ? <img src={user.picture} alt={user.name} style={{width:28,height:28,borderRadius:'50%',objectFit:'cover'}}/>
-          : <div style={{width:28,height:28,borderRadius:'50%',background:T.grad,
-              display:'flex',alignItems:'center',justifyContent:'center',
-              fontSize:'.72rem',fontWeight:800,color:'#fff',fontFamily:'var(--font-head)'}}>
-              {initials}
-            </div>
-        }
-        <span style={{fontSize:'.8rem',fontWeight:600,color:T.white,fontFamily:'var(--font-head)',
-          maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-          {user.name}
-        </span>
-        <ChevronDown size={13} color={T.muted}/>
+      <button onClick={()=>setOpen(!open)}
+        style={{display:'flex',alignItems:'center',gap:8,background:'#fff',
+          border:`1px solid ${T.border}`,borderRadius:100,padding:'6px 12px',
+          cursor:'pointer', boxShadow:'0 1px 2px rgba(0,0,0,.05)', fontWeight:600, color:T.navy}}>
+        {user.name} <ChevronDown size={14} color={T.muted}/>
       </button>
       {open&&(
         <>
           <div onClick={()=>setOpen(false)} style={{position:'fixed',inset:0,zIndex:50}}/>
           <div style={{position:'absolute',right:0,top:'calc(100% + 8px)',zIndex:100,
-            background:'#0f2044',border:`1px solid ${T.border}`,borderRadius:12,
-            padding:'6px',minWidth:220,boxShadow:'0 8px 32px rgba(0,0,0,.4)'}}>
-            <div style={{padding:'10px 12px',borderBottom:`1px solid ${T.border}`,marginBottom:4}}>
-              <p style={{fontSize:'.82rem',fontWeight:700,color:T.white,fontFamily:'var(--font-head)'}}>{user.name}</p>
-              <p style={{fontSize:'.75rem',color:T.teal,marginTop:2}}>{user.email}</p>
-              <div style={{display:'inline-flex',alignItems:'center',gap:4,marginTop:6,
-                background:'rgba(16,185,129,.12)',border:'1px solid rgba(16,185,129,.25)',
-                borderRadius:100,padding:'2px 8px',fontSize:'.65rem',fontWeight:700,
-                color:T.success,fontFamily:'var(--font-head)',textTransform:'uppercase',letterSpacing:'.06em'}}>
-                <ShieldCheck size={10}/> Adit Verified
-              </div>
+            background:'#fff',border:`1px solid ${T.border}`,borderRadius:12,
+            padding:'8px',minWidth:220,boxShadow:'0 10px 25px rgba(0,0,0,.1)'}}>
+            <div style={{padding:'8px 12px',borderBottom:`1px solid ${T.border}`,marginBottom:4}}>
+              <p style={{fontSize:'.85rem',fontWeight:700,color:T.navy}}>{user.name}</p>
+              <p style={{fontSize:'.75rem',color:T.muted,marginTop:2}}>{user.email}</p>
             </div>
             <a href={`${API}/auth/logout`} style={{display:'flex',alignItems:'center',gap:8,
-              padding:'8px 12px',borderRadius:8,textDecoration:'none',color:'#fca5a5',
-              fontSize:'.82rem',fontWeight:600,fontFamily:'var(--font-head)',
-              transition:'background .15s'}}
-              onMouseEnter={e=>e.currentTarget.style.background='rgba(239,68,68,.1)'}
-              onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+              padding:'8px 12px',borderRadius:8,textDecoration:'none',color:'#b91c1c',
+              fontSize:'.85rem',fontWeight:600}}>
               <LogOut size={14}/> Sign out
             </a>
           </div>
@@ -520,21 +485,21 @@ function UserMenu({user}) {
   )
 }
 
-// ── Main App ──────────────────────────────────────────────────────────────────
+// ── Main App Routing ──────────────────────────────────────────────────────────
 export default function App() {
   const [authState,setAuthState]=useState({loading:true,authenticated:false,user:null})
+  const [tab, setTab] = useState('analyzer') // 'analyzer' | 'dashboard'
+  
+  // Analyzer Form State
   const [uploadLoading,setUploadLoading]=useState(false)
   const [calcLoading,setCalcLoading]=useState(false)
   const [result,setResult]=useState(null)
-  const [showRaw,setShowRaw]=useState(false)
-
   const [form,setForm]=useState({
     existing_merchant:'',total_amount:'',total_count:'',
     total_fees_paid:'',card_present_pct:'90',mode:'template'
   })
   const set=key=>val=>setForm(f=>({...f,[key]:val}))
 
-  // Check auth on mount
   useEffect(()=>{
     fetch(`${API}/api/me`, {credentials: 'include'}).then(r=>r.json()).then(data=>{
       setAuthState({loading:false,authenticated:data.authenticated,user:data.user||null})
@@ -549,7 +514,6 @@ export default function App() {
       total_fees_paid:extracted.total_fees??f.total_fees_paid,
     }))
     setResult(null)
-    window._rawText=extracted.raw_text
   }
 
   const calculate=async()=>{
@@ -571,173 +535,88 @@ export default function App() {
     finally { setCalcLoading(false) }
   }
 
+  if(authState.loading) return <div style={{padding:'4rem',textAlign:'center'}}>Loading...</div>
+  if(!authState.authenticated) return <LoginPage error={new URLSearchParams(window.location.search).get('error')}/>
+
   const canCalc=form.total_amount&&form.total_count&&form.total_fees_paid
 
-  // Loading spinner
-  if(authState.loading) return (
-    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'1rem'}}>
-        <div style={{width:42,height:42,borderRadius:'50%',border:`3px solid rgba(0,200,180,.2)`,
-          borderTopColor:T.teal,animation:'spin .8s linear infinite'}}/>
-        <p style={{color:T.muted,fontSize:'.85rem',fontFamily:'var(--font-head)'}}>Loading…</p>
-      </div>
-    </div>
-  )
-
-  // Not authenticated → login page
-  if(!authState.authenticated) {
-    const params=new URLSearchParams(window.location.search)
-    return <LoginPage error={params.get('error')}/>
-  }
-
-  // Authenticated → main app
   return (
-    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column'}}>
+    <div style={{minHeight:'100vh', background:T.bg, display:'flex', flexDirection:'column', fontFamily:'var(--font-body)'}}>
+      
+      {/* Top Navigation */}
+      <header style={{background:'#ffffff', borderBottom:`1px solid ${T.border}`, padding:'0 2rem', 
+        height:72, display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:100}}>
+        
+        <div style={{display:'flex', alignItems:'center', gap:'2.5rem'}}>
+          <img src="https://adit.com/storage/settings/logo.png" alt="Adit Logo" style={{height:28}} onError={(e)=>{e.target.style.display='none'}}/>
+          
+          <nav style={{display:'flex', gap:'1rem'}}>
+            <button onClick={()=>setTab('analyzer')} style={{
+              background:tab==='analyzer'?'#f1f5f9':'transparent', color:tab==='analyzer'?T.navy:T.muted,
+              border:'none', padding:'8px 16px', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:'.95rem'
+            }}>Analyzer</button>
+            <button onClick={()=>setTab('dashboard')} style={{
+              background:tab==='dashboard'?'#f1f5f9':'transparent', color:tab==='dashboard'?T.navy:T.muted,
+              border:'none', padding:'8px 16px', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:'.95rem'
+            }}>History Dashboard</button>
+          </nav>
+        </div>
 
-      {/* Header */}
-      <header style={{background:'rgba(10,22,40,.85)',backdropFilter:'blur(16px)',
-        WebkitBackdropFilter:'blur(16px)',borderBottom:`1px solid ${T.border}`,
-        position:'sticky',top:0,zIndex:100,padding:'0 2rem',height:68,
-        display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-        <div style={{display:'flex',alignItems:'center',gap:'.85rem'}}>
-          <div style={{fontFamily:'var(--font-head)',fontWeight:800,fontSize:'1.35rem',
-            background:T.grad,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',
-            letterSpacing:'-.01em'}}>Adit</div>
-          <div style={{width:1,height:22,background:T.border}}/>
-          <span style={{fontFamily:'var(--font-head)',fontWeight:500,fontSize:'.9rem',color:T.muted}}>
-            Pay — Statement Analyser
-          </span>
-        </div>
-        <div style={{display:'flex',alignItems:'center',gap:'1rem'}}>
-          <a href="https://adit.com/dental-billing-software" target="_blank" rel="noreferrer"
-            style={{display:'flex',alignItems:'center',gap:6,background:T.grad,color:'#fff',
-              border:'none',padding:'.45rem 1.1rem',borderRadius:100,fontWeight:700,
-              fontSize:'.8rem',cursor:'pointer',fontFamily:'var(--font-head)',
-              textDecoration:'none',letterSpacing:'.02em'}}>
-            Adit Pay <ArrowRight size={13}/>
-          </a>
-          <UserMenu user={authState.user}/>
-        </div>
+        <UserMenu user={authState.user}/>
       </header>
 
-      {/* Hero */}
-      <div style={{textAlign:'center',padding:'3.5rem 1.5rem 2rem'}}>
-        <TealBadge><Sparkles size={11}/> Adit Pay Pricing Tool</TealBadge>
-        <h1 style={{fontFamily:'var(--font-head)',fontWeight:800,
-          fontSize:'clamp(1.8rem,4vw,2.8rem)',lineHeight:1.15,marginTop:'1rem',letterSpacing:'-.02em'}}>
-          See how much you could save<br/>
-          <span style={{background:T.grad,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>
-            switching to Adit Pay
-          </span>
-        </h1>
-        <p style={{color:T.muted,fontSize:'1rem',maxWidth:520,margin:'.9rem auto 0',lineHeight:1.7}}>
-          Upload a bank or processor statement and instantly calculate your savings with Adit Pay's transparent pricing.
-        </p>
-      </div>
-
-      {/* Main */}
-      <main style={{maxWidth:980,margin:'0 auto',padding:'0 1.25rem 4rem',width:'100%',
-        display:'flex',flexDirection:'column',gap:'1.5rem'}}>
-
-        <GlassCard>
-          <SectionLabel icon={FileText}>Step 1 — Upload Statement</SectionLabel>
-          <UploadZone onExtracted={onExtracted} setLoading={setUploadLoading} loading={uploadLoading}/>
-        </GlassCard>
-
-        <GlassCard>
-          <SectionLabel icon={Pencil}>Step 2 — Review &amp; Edit Figures</SectionLabel>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:'1rem',marginBottom:'1.5rem'}}>
-            <Field label="Existing Merchant / Processor" value={form.existing_merchant} onChange={set('existing_merchant')} hint="Name shown on your statement"/>
-            <Field label="Total Transaction Amount" value={form.total_amount} onChange={set('total_amount')} type="number" step="0.01" prefix="$" hint="Gross sales"/>
-            <Field label="Transaction Count" value={form.total_count} onChange={set('total_count')} type="number" step="1" hint="Number of transactions"/>
-            <Field label="Total Fees Paid (Current)" value={form.total_fees_paid} onChange={set('total_fees_paid')} type="number" step="0.01" prefix="$" hint="Processing fees from statement"/>
-          </div>
-
-          <div style={{marginBottom:'1.25rem'}}>
-            <p style={{fontSize:'.72rem',fontWeight:700,color:T.muted,textTransform:'uppercase',
-              letterSpacing:'.07em',marginBottom:'.65rem',fontFamily:'var(--font-head)'}}>Transaction Mix</p>
-            <div style={{display:'flex',gap:'.75rem',flexWrap:'wrap'}}>
-              {[{val:'template',label:'Card Present + Online'},{val:'card_present_only',label:'Card Present Only'}].map(opt=>{
-                const sel=form.mode===opt.val
-                return (
-                  <button key={opt.val} onClick={()=>set('mode')(opt.val)}
-                    style={{padding:'.5rem 1.1rem',borderRadius:100,cursor:'pointer',
-                      fontFamily:'var(--font-head)',fontWeight:600,fontSize:'.83rem',
-                      border:sel?'1px solid rgba(0,200,180,.5)':`1px solid ${T.border}`,
-                      background:sel?'rgba(0,200,180,.12)':'rgba(255,255,255,.04)',
-                      color:sel?T.teal:T.muted,transition:'all .18s'}}>
-                    {opt.label}
-                  </button>
-                )
-              })}
+      {/* Main Content Area */}
+      <main style={{maxWidth:1080, margin:'0 auto', padding:'3rem 1.5rem', width:'100%', flex:1}}>
+        
+        {tab === 'dashboard' ? (
+          <HistoryDashboard />
+        ) : (
+          <div style={{display:'flex', flexDirection:'column', gap:'1.5rem'}}>
+            <div style={{textAlign:'center', marginBottom:'1.5rem'}}>
+              <h1 style={{fontSize:'2.2rem', fontWeight:900, color:T.navy, letterSpacing:'-.02em'}}>Auditor Engine</h1>
+              <p style={{color:T.muted, fontSize:'1.05rem', marginTop:'.5rem'}}>Extract statements and prepare a compelling Adit Pay pitch.</p>
             </div>
+
+            <Card>
+              <SectionTitle icon={FileText}>Step 1 — Upload Statement</SectionTitle>
+              <UploadZone onExtracted={onExtracted} setLoading={setUploadLoading} loading={uploadLoading}/>
+            </Card>
+
+            <Card>
+              <SectionTitle icon={Pencil}>Step 2 — Review & Edit Figures</SectionTitle>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:'1.5rem',marginBottom:'2rem'}}>
+                <Field label="Original Merchant" value={form.existing_merchant} onChange={set('existing_merchant')} />
+                <Field label="Gross Transaction Volume" value={form.total_amount} onChange={set('total_amount')} type="number" step="0.01" prefix="$" />
+                <Field label="Total Transactions" value={form.total_count} onChange={set('total_count')} type="number" step="1" />
+                <Field label="Total Fees Assessed" value={form.total_fees_paid} onChange={set('total_fees_paid')} type="number" step="0.01" prefix="$" />
+              </div>
+
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', borderTop:`1px solid ${T.border}`, paddingTop:'1.5rem'}}>
+                <div>
+                  <p style={{fontWeight:700, color:T.navy, fontSize:'.9rem'}}>Ready to verify?</p>
+                  <p style={{fontSize:'.8rem', color:T.muted}}>Ensure numbers match the source DB before proceeding.</p>
+                </div>
+                <button onClick={calculate} disabled={calcLoading||!canCalc}
+                  style={{display:'flex',alignItems:'center',gap:'.6rem', background:canCalc?'#0f172a':'#cbd5e1', 
+                    color:'#fff',border:'none', padding:'.85rem 2.5rem',borderRadius:100,fontWeight:700,fontSize:'.95rem',
+                    cursor:canCalc?'pointer':'not-allowed', transition:'all .2s', boxShadow:canCalc?'0 4px 14px rgba(15,23,42,.3)':'none'}}>
+                  {calcLoading?<RefreshCw size={18} className="spin"/>:<Calculator size={18}/>}
+                  {calcLoading?'Running Audit':'Generate Proposal'}
+                </button>
+              </div>
+            </Card>
+
+            {result&&(
+              <div id="results-anchor" style={{marginTop:'1.5rem'}}>
+                <AnalysisDashboard result={result}/>
+              </div>
+            )}
           </div>
-
-          {form.mode==='template'&&(
-            <div style={{marginBottom:'1.5rem'}}>
-              <p style={{fontSize:'.72rem',fontWeight:700,color:T.muted,textTransform:'uppercase',
-                letterSpacing:'.07em',marginBottom:'.55rem',fontFamily:'var(--font-head)'}}>
-                Card Present Split —{' '}
-                <span style={{color:T.teal}}>{form.card_present_pct}% Card Present</span>
-                {' '}/ {100-Number(form.card_present_pct)}% Online
-              </p>
-              <input type="range" min="0" max="100" step="1"
-                value={form.card_present_pct} onChange={e=>set('card_present_pct')(e.target.value)}
-                style={{width:'100%',accentColor:T.teal,cursor:'pointer',height:4}}/>
-            </div>
-          )}
-
-          <button onClick={calculate} disabled={calcLoading||!canCalc}
-            style={{display:'inline-flex',alignItems:'center',gap:'.6rem',
-              background:canCalc?T.grad:'rgba(255,255,255,.08)',color:'#fff',border:'none',
-              padding:'.75rem 2rem',borderRadius:100,fontWeight:700,fontSize:'.95rem',
-              cursor:canCalc?'pointer':'not-allowed',fontFamily:'var(--font-head)',
-              opacity:!canCalc?.5:1,transition:'opacity .2s',letterSpacing:'.02em'}}
-            onMouseDown={e=>{if(canCalc)e.currentTarget.style.transform='scale(.97)'}}
-            onMouseUp={e=>e.currentTarget.style.transform='scale(1)'}>
-            {calcLoading?<RefreshCw size={16} className="spin"/>:<Calculator size={16}/>}
-            {calcLoading?'Calculating…':'Calculate My Savings'}
-          </button>
-          {!canCalc&&<p style={{fontSize:'.78rem',color:T.muted,marginTop:'.65rem'}}>
-            Fill in Total Amount, Count, and Fees to calculate.
-          </p>}
-        </GlassCard>
-
-        {result&&(
-          <GlassCard id="results-anchor">
-            <SectionLabel icon={BarChart3}>Step 3 — Comparison Results</SectionLabel>
-            <AnalysisDashboard result={result}/>
-          </GlassCard>
-        )}
-
-        {window._rawText&&(
-          <GlassCard style={{padding:'1rem 1.5rem'}}>
-            <button onClick={()=>setShowRaw(r=>!r)}
-              style={{display:'flex',alignItems:'center',gap:'.5rem',background:'none',border:'none',
-                cursor:'pointer',color:T.muted,fontSize:'.82rem',fontWeight:600,fontFamily:'var(--font-body)'}}>
-              {showRaw?<ChevronUp size={14}/>:<ChevronDown size={14}/>} View extracted raw text
-            </button>
-            {showRaw&&<pre style={{marginTop:'.85rem',fontSize:'.72rem',color:T.muted,
-              background:'rgba(255,255,255,.03)',border:`1px solid ${T.border}`,
-              borderRadius:10,padding:'1rem',whiteSpace:'pre-wrap',maxHeight:260,overflow:'auto',
-              fontFamily:'monospace'}}>{window._rawText}</pre>}
-          </GlassCard>
         )}
       </main>
-
-      <footer style={{borderTop:`1px solid ${T.border}`,padding:'1.5rem 2rem',
-        display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'1rem',
-        background:'rgba(10,22,40,.6)'}}>
-        <div style={{fontFamily:'var(--font-head)',fontWeight:800,fontSize:'1rem',
-          background:T.grad,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Adit</div>
-        <p style={{fontSize:'.78rem',color:T.muted}}>
-          © {new Date().getFullYear()} Adit Communications, Inc. ·{' '}
-          <a href="https://adit.com/privacy-policy" target="_blank" rel="noreferrer"
-            style={{color:T.muted,textDecoration:'underline'}}>Privacy Policy</a>
-        </p>
-        <a href="https://adit.com/dental-billing-software" target="_blank" rel="noreferrer"
-          style={{fontSize:'.78rem',color:T.teal,textDecoration:'none',fontWeight:600,
-            fontFamily:'var(--font-head)'}}>Learn about Adit Pay →</a>
+      
+      <footer style={{textAlign:'center', padding:'2rem', color:T.muted, fontSize:'.85rem'}}>
+        © {new Date().getFullYear()} Adit Communications, Inc. All rights reserved.
       </footer>
     </div>
   )
