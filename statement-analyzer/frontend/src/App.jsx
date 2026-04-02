@@ -5,7 +5,7 @@ import {
   DollarSign, Hash, Percent, Sparkles, ArrowRight, BarChart3,
   LogOut, Lock, ShieldCheck
 } from 'lucide-react'
-const API = import.meta.env.VITE_API_URL || 'https://statement-analyzer-1-0.onrender.com'
+const API = import.meta.env.VITE_API_URL || 'https://statement-analyzer-ap.onrender.com'
 
 const fmt  = (n, d=2) => n==null ? '—' : Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})
 const fmtC = n => n==null ? '—' : '$'+fmt(n)
