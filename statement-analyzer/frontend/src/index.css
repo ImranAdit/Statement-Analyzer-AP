@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700;800;900&family=Poppins:wght@400;500;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --adit-navy:       #0a1628;
+  --adit-navy-mid:   #0f2044;
+  --adit-navy-light: #162d5a;
+  --adit-teal:       #00c8b4;
+  --adit-teal-dim:   #00a896;
+  --adit-teal-glow:  rgba(0,200,180,.18);
+  --adit-blue:       #2563eb;
+  --adit-white:      #ffffff;
+  --adit-off-white:  #f0f4ff;
+  --adit-muted:      #94a3b8;
+  --adit-border:     rgba(255,255,255,.1);
+  --adit-card:       rgba(255,255,255,.05);
+  --adit-card-hover: rgba(255,255,255,.09);
+  --adit-success:    #10b981;
+  --adit-danger:     #ef4444;
+  --adit-gradient:   linear-gradient(135deg, #00c8b4 0%, #2563eb 100%);
+
+  --font-head: 'Poppins', sans-serif;
+  --font-body: 'Nunito Sans', sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--adit-navy);
+  color: var(--adit-white);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,200,180,.12) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(37,99,235,.1) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root { position: relative; z-index: 1; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--adit-navy-mid); }
+::-webkit-scrollbar-thumb { background: var(--adit-teal-dim); border-radius: 3px; }
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { opacity: 1; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin .8s linear infinite; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up   { animation: fadeUp .45s ease both; }
+.fade-up-1 { animation-delay: .06s; }
+.fade-up-2 { animation-delay: .14s; }
+.fade-up-3 { animation-delay: .22s; }
+.fade-up-4 { animation-delay: .30s; }
+
+@keyframes pulseRing {
+  0%  { box-shadow: 0 0 0 0 rgba(0,200,180,.4); }
+  70% { box-shadow: 0 0 0 10px rgba(0,200,180,0); }
+  100%{ box-shadow: 0 0 0 0 rgba(0,200,180,0); }
+}
