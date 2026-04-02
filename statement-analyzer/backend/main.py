@@ -179,7 +179,7 @@ def parse_statement(raw):
             break
 
     # 2. Total Amount (Gross Sales, Net Sales, Volume)
-    amount_match = re.search(r'(?i)(?:gross\s+sales|net\s+sales|total\s+volume|amount\s+processed|total\s+sales)[^\d]*\$?([\d,]+\.\d{2})', raw)
+    amount_match = re.search(r'(?i)(?:gross\s+sales|net\s+sales|total\s+volume|amount\s+processed|total\s+sales|total\s+deposits|total\s+settlement|batch\s+total|total\s+amount|total\s+bankcard\s+sales|total)[^\d]*\$?([\d,]+\.\d{2})', raw)
     if amount_match:
         extracted["total_amount"] = amount_match.group(1).replace(",", "")
     else:
@@ -187,15 +187,17 @@ def parse_statement(raw):
         amounts = re.findall(r'\$\s?([\d,]+\.\d{2})', raw)
         if amounts:
             floats = [float(a.replace(",", "")) for a in amounts]
-            extracted["total_amount"] = str(max(floats))
+            valid_floats = [f for f in floats if f < 1000000] # avoid parsing rogue account numbers
+            if valid_floats:
+                extracted["total_amount"] = str(max(valid_floats))
 
     # 3. Transaction Count
-    count_match = re.search(r'(?i)(?:total\s+items|transaction\s+count|sales\s+count|number\s+of\s+sales|item\s+count|count|items)[^\d]*(\d+)', raw)
+    count_match = re.search(r'(?i)(?:total\s+items|transaction\s+count|sales\s+count|number\s+of\s+sales|item\s+count|count|items|transactions|total\s+transactions)[^\d]*(\d+)', raw)
     if count_match:
         extracted["total_count"] = count_match.group(1)
 
     # 4. Total Fees Paid
-    fees_match = re.search(r'(?i)(?:total\s+fees|fees\s+charged|amount\s+due|total\s+charges)[^\d]*\$?([\d,]+\.\d{2})', raw)
+    fees_match = re.search(r'(?i)(?:total\s+fees|fees\s+charged|amount\s+due|total\s+charges|fees|total\s+amount\s+due|fee\s+summary|total\s+deductions)[^\d]*\$?([\d,]+\.\d{2})', raw)
     if fees_match:
         extracted["total_fees"] = fees_match.group(1).replace(",", "")
 
