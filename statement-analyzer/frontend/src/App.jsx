@@ -5,8 +5,7 @@ import {
   DollarSign, Hash, Percent, Sparkles, ArrowRight, BarChart3,
   LogOut, Lock, ShieldCheck
 } from 'lucide-react'
-
-const API = ''
+const API = import.meta.env.VITE_API_URL || 'https://statement-analyzer-1-0.onrender.com'
 
 const fmt  = (n, d=2) => n==null ? '—' : Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})
 const fmtC = n => n==null ? '—' : '$'+fmt(n)
@@ -167,7 +166,7 @@ function LoginPage({error}) {
           )}
 
           {/* Google SSO button */}
-          <a href="/auth/login"
+          <a href={`${API}/auth/login`}
             onMouseEnter={()=>setHovered(true)}
             onMouseLeave={()=>setHovered(false)}
             style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,
@@ -213,7 +212,7 @@ function UploadZone({onExtracted,setLoading,loading}) {
     setError(null); setFileName(file.name); setLoading(true)
     const fd=new FormData(); fd.append('file',file)
     try {
-      const res=await fetch(`${API}/api/upload`,{method:'POST',body:fd})
+      const res=await fetch(`${API}/api/upload`,{method:'POST',body:fd,credentials:'include'})
       const data=await res.json()
       if(!res.ok) throw new Error(data.detail||'Upload failed')
       onExtracted(data.extracted)
@@ -404,7 +403,7 @@ function UserMenu({user}) {
                 <ShieldCheck size={10}/> Adit Verified
               </div>
             </div>
-            <a href="/auth/logout" style={{display:'flex',alignItems:'center',gap:8,
+            <a href={`${API}/auth/logout`} style={{display:'flex',alignItems:'center',gap:8,
               padding:'8px 12px',borderRadius:8,textDecoration:'none',color:'#fca5a5',
               fontSize:'.82rem',fontWeight:600,fontFamily:'var(--font-head)',
               transition:'background .15s'}}
@@ -435,7 +434,7 @@ export default function App() {
 
   // Check auth on mount
   useEffect(()=>{
-    fetch('/api/me').then(r=>r.json()).then(data=>{
+    fetch(`${API}/api/me`, {credentials: 'include'}).then(r=>r.json()).then(data=>{
       setAuthState({loading:false,authenticated:data.authenticated,user:data.user||null})
     }).catch(()=>setAuthState({loading:false,authenticated:false,user:null}))
   },[])
@@ -455,7 +454,7 @@ export default function App() {
     setCalcLoading(true)
     try {
       const res=await fetch(`${API}/api/calculate`,{
-        method:'POST',headers:{'Content-Type':'application/json'},
+        method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',
         body:JSON.stringify({...form,
           total_amount:Number(form.total_amount),
           total_count:Number(form.total_count),
