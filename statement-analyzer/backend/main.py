@@ -171,7 +171,7 @@ async def parse_statement(raw):
     }
 
     api_key = os.getenv("GEMINI_API_KEY", "AIzaSyCJB3XbIbel0cot_SR24B59VtBWmp4ssh4")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
     
     prompt = """
     You are a financial analyst OCR data extraction tool.
@@ -193,6 +193,7 @@ async def parse_statement(raw):
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.post(url, json=payload, timeout=20.0)
+            resp.raise_for_status()
             data = resp.json()
             
             text_resp = data["candidates"][0]["content"]["parts"][0]["text"]

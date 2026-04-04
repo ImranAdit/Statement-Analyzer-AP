@@ -3,7 +3,7 @@ import {
   Upload, FileText, Calculator, CheckCircle2, AlertCircle,
   ChevronDown, ChevronUp, Pencil, RefreshCw, TrendingDown,
   DollarSign, Hash, Percent, Sparkles, ArrowRight, BarChart3,
-  LogOut, Lock, ShieldCheck, LayoutDashboard, Search
+  LogOut, Lock, ShieldCheck, Search
 } from 'lucide-react'
 
 const API = import.meta.env.VITE_API_URL || 'https://statement-analyzer-ap.onrender.com'
@@ -12,74 +12,81 @@ const fmt  = (n, d=2) => n==null ? '—' : Number(n).toLocaleString('en-US',{min
 const fmtC = n => n==null ? '—' : '$'+fmt(n)
 const fmtP = n => n==null ? '—' : fmt(n,4)+'%'
 
-// ── Dark Theme Tokens ─────────────────────────────────────────────────────────
 const T = {
-  bg: '#0a1628',
-  card: 'rgba(255,255,255,.05)',
-  navy: '#ffffff', // primary text
-  navyMid: '#cbd5e1', // secondary text
-  text: '#f8fafc',
-  muted: '#94a3b8',
-  border: 'rgba(255,255,255,.1)',
-  teal: '#00c8b4',
-  tealDark: '#00a896',
-  blue: '#2563eb',
-  success: '#10b981',
-  danger: '#ef4444',
-  grad: 'linear-gradient(135deg, #00c8b4 0%, #2563eb 100%)',
+  navy:'#0a1628', navyMid:'#0f2044', navyLight:'#162d5a',
+  teal:'#00c8b4', tealDim:'#00a896', blue:'#2563eb',
+  white:'#ffffff', muted:'#94a3b8',
+  border:'rgba(255,255,255,.1)', card:'rgba(255,255,255,.05)',
+  success:'#10b981', danger:'#ef4444',
+  grad:'linear-gradient(135deg,#00c8b4 0%,#2563eb 100%)',
 }
 
-// ── Shared UI Components ──────────────────────────────────────────────────────
-function Card({children,style,id}) {
+// ── Design atoms ─────────────────────────────────────────────────────────────
+function GlassCard({children,style,id}) {
   return (
-    <div id={id} className="fade-up" style={{background:T.card, border:`1px solid ${T.border}`, borderRadius:16, 
-      backdropFilter:'blur(10px)', padding:'2rem', ...style}}>
+    <div id={id} style={{background:T.card,border:`1px solid ${T.border}`,borderRadius:18,
+      backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',padding:'1.75rem',...style}}>
       {children}
     </div>
   )
 }
 
-function SectionTitle({icon:Icon,children}) {
+function TealBadge({children}) {
   return (
-    <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:'1.5rem'}}>
-      <div style={{width:36,height:36,borderRadius:10,background:'rgba(0,200,180,.1)',
+    <span style={{display:'inline-flex',alignItems:'center',gap:6,
+      background:'rgba(0,200,180,.12)',border:'1px solid rgba(0,200,180,.3)',
+      color:T.teal,borderRadius:100,padding:'4px 14px',
+      fontSize:'.72rem',fontWeight:700,letterSpacing:'.08em',
+      textTransform:'uppercase',fontFamily:'var(--font-head)'}}>
+      {children}
+    </span>
+  )
+}
+
+function SectionLabel({icon:Icon,children}) {
+  return (
+    <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1.25rem'}}>
+      <div style={{width:34,height:34,borderRadius:10,background:T.grad,
         display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-        <Icon size={18} color={T.teal}/>
+        <Icon size={16} color="#fff"/>
       </div>
-      <h2 style={{fontFamily:'var(--font-head)',fontWeight:700,fontSize:'1.1rem',color:T.navy}}>
+      <span style={{fontFamily:'var(--font-head)',fontWeight:600,fontSize:'1rem',color:T.white}}>
         {children}
-      </h2>
+      </span>
     </div>
   )
 }
 
-function Field({label,value,onChange,type='text',step,prefix,hint}) {
-  const [focus,setFocus]=useState(false)
+function Field({label,value,onChange,type='text',step,suffix,prefix,hint}) {
+  const [hover,setHover]=useState(false)
   return (
     <div style={{display:'flex',flexDirection:'column',gap:'.4rem'}}>
-      <label style={{fontSize:'.75rem',fontWeight:700,color:T.navyMid,
-        textTransform:'uppercase',letterSpacing:'.05em',fontFamily:'var(--font-head)'}}>
+      <label style={{fontSize:'.72rem',fontWeight:700,color:T.muted,
+        textTransform:'uppercase',letterSpacing:'.07em',fontFamily:'var(--font-head)'}}>
         {label}
       </label>
-      <div style={{display:'flex',alignItems:'stretch',
-          border:`1px solid ${focus?T.teal:T.border}`,
-          borderRadius:10,overflow:'hidden',background:focus?'rgba(255,255,255,.05)':'rgba(255,255,255,.02)',
-          transition:'all .2s', boxShadow: focus ? '0 0 0 3px rgba(0,200,180,.1)' : 'none'}}>
-        {prefix&&<span style={{padding:'0 .85rem',color:T.muted,fontWeight:600,fontSize:'.95rem',
-          borderRight:`1px solid ${T.border}`,background:'rgba(255,255,255,.05)',
+      <div onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)}
+        style={{display:'flex',alignItems:'stretch',
+          border:`1px solid ${hover?'rgba(0,200,180,.4)':T.border}`,
+          borderRadius:10,overflow:'hidden',background:'rgba(255,255,255,.04)',transition:'border-color .2s'}}>
+        {prefix&&<span style={{padding:'0 .75rem',color:T.teal,fontWeight:700,fontSize:'.95rem',
+          borderRight:`1px solid ${T.border}`,background:'rgba(0,200,180,.08)',
           display:'flex',alignItems:'center'}}>{prefix}</span>}
         <input type={type} value={value} onChange={e=>onChange(e.target.value)} step={step}
-          onFocus={()=>setFocus(true)} onBlur={()=>setFocus(false)}
-          style={{flex:1,border:'none',background:'transparent',padding:'.7rem .85rem',
-            fontSize:'.95rem',outline:'none',color:'#fff',fontFamily:'var(--font-body)', fontWeight:500}}/>
+          style={{flex:1,border:'none',background:'transparent',padding:'.6rem .85rem',
+            fontSize:'.95rem',outline:'none',color:T.white,fontFamily:'var(--font-body)'}}/>
+        {suffix&&<span style={{padding:'0 .75rem',color:T.muted,fontSize:'.85rem',
+          borderLeft:`1px solid ${T.border}`,background:'rgba(255,255,255,.03)',
+          display:'flex',alignItems:'center'}}>{suffix}</span>}
       </div>
-      {hint&&<p style={{fontSize:'.75rem',color:T.muted}}>{hint}</p>}
+      {hint&&<p style={{fontSize:'.72rem',color:T.muted,marginTop:'.1rem'}}>{hint}</p>}
     </div>
   )
 }
 
-// ── Login Page ────────────────────────────────────────────────────────────────
+// ── Login Page ─────────────────────────────────────────────────────────────
 function LoginPage({error}) {
+  const [hovered,setHovered]=useState(false)
   const errMsg = error==='unauthorized_domain'
     ? 'Only @adit.com email addresses are allowed. Please sign in with your Adit work account.'
     : error==='auth_failed'
@@ -87,59 +94,68 @@ function LoginPage({error}) {
     : null
 
   return (
-    <div style={{minHeight:'100vh',background:T.bg,display:'flex',flexDirection:'column',
-      alignItems:'center',justifyContent:'center',padding:'2rem'}}>
-      <div style={{width:'100%',maxWidth:440}}>
-        <div style={{textAlign:'center',marginBottom:'2rem'}}>
-          <img src="https://adit.com/storage/settings/logo.png" alt="Adit Logo" style={{height:40,marginBottom:'1rem', filter:'brightness(0) invert(1)'}} onError={(e)=>{e.target.style.display='none'}}/>
-          <h1 style={{fontFamily:'var(--font-head)',fontWeight:800,fontSize:'1.8rem',color:T.navy,letterSpacing:'-.02em'}}>
-            Statement Analyzer
-          </h1>
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',
+      alignItems:'center',justifyContent:'center',padding:'2rem',position:'relative'}}>
+
+      <div style={{position:'fixed',inset:0,pointerEvents:'none',
+        background:'radial-gradient(ellipse 60% 60% at 50% 40%,rgba(0,200,180,.1) 0%,transparent 70%)'}}/> 
+
+      <div style={{width:'100%',maxWidth:420,position:'relative',zIndex:1}}>
+        <div style={{textAlign:'center',marginBottom:'2.5rem'}}>
+          <img src="https://adit.com/storage/settings/logo.png" alt="Adit Logo" style={{height:40, marginBottom:'1rem'}} onError={(e)=>{e.target.style.display='none'}}/>
+          <TealBadge><ShieldCheck size={11}/> Internal Tool</TealBadge>
         </div>
 
-        <Card style={{padding:'2.5rem 2rem'}}>
-          <div style={{textAlign:'center',marginBottom:'2rem'}}>
-            <div style={{width:56,height:56,borderRadius:16,background:'rgba(37,99,235,.15)',
-              display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 1rem'}}>
-              <Lock size={24} color={'#60a5fa'}/>
+        <div style={{background:'rgba(255,255,255,.05)',border:`1px solid ${T.border}`,
+          borderRadius:20,backdropFilter:'blur(16px)',padding:'2.25rem 2rem'}}>
+          <div style={{textAlign:'center',marginBottom:'1.75rem'}}>
+            <div style={{width:52,height:52,borderRadius:14,background:T.grad,
+              display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto .9rem'}}>
+              <Lock size={22} color="#fff"/>
             </div>
-            <h2 style={{fontFamily:'var(--font-head)',fontWeight:700,fontSize:'1.2rem',color:T.navy,marginBottom:'.5rem'}}>
-              Internal Tool Access
-            </h2>
-            <p style={{fontSize:'.9rem',color:T.muted,lineHeight:1.6}}>
-              Sign in with your <strong style={{color:'#fff'}}>@adit.com</strong> Google account.
+            <h1 style={{fontFamily:'var(--font-head)',fontWeight:800,fontSize:'1.35rem',
+              color:T.white,letterSpacing:'-.01em',marginBottom:'.45rem'}}>
+              Sign in to continue
+            </h1>
+            <p style={{fontSize:'.85rem',color:T.muted,lineHeight:1.6}}>
+              This tool is restricted to Adit team members.<br/>
+              Sign in with your <span style={{color:T.teal,fontWeight:700}}>@adit.com</span> account.
             </p>
           </div>
 
           {errMsg&&(
-            <div style={{marginBottom:'1.5rem',display:'flex',gap:'.6rem',alignItems:'flex-start',
-              background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',borderRadius:12,padding:'1rem',fontSize:'.85rem',color:'#fca5a5'}}>
-              <AlertCircle size={16} style={{flexShrink:0,marginTop:2}}/> {errMsg}
+            <div style={{marginBottom:'1.25rem',display:'flex',gap:'.6rem',alignItems:'flex-start',
+              background:'rgba(239,68,68,.12)',border:'1px solid rgba(239,68,68,.25)',
+              borderRadius:10,padding:'.75rem 1rem',fontSize:'.83rem',color:'#fca5a5'}}>
+              <AlertCircle size={15} style={{flexShrink:0,marginTop:1}}/>
+              {errMsg}
             </div>
           )}
 
           <a href={`${API}/auth/login`}
+            onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}
             style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,
               width:'100%',padding:'.85rem',borderRadius:12,textDecoration:'none',
-              border:`1px solid rgba(255,255,255,.2)`,background:'rgba(255,255,255,.1)',
-              transition:'all .2s',cursor:'pointer',color:'#fff',fontWeight:600}}
-            onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,.15)'}
-            onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,.1)'}>
+              border:`1px solid ${hovered?'rgba(0,200,180,.5)':T.border}`,
+              background:hovered?'rgba(0,200,180,.1)':'rgba(255,255,255,.06)',
+              transition:'all .2s',cursor:'pointer'}}>
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            Continue with Google
+            <span style={{fontFamily:'var(--font-head)',fontWeight:700,fontSize:'.92rem',color:T.white}}>
+              Continue with Google
+            </span>
           </a>
-        </Card>
+        </div>
       </div>
     </div>
   )
 }
 
-// ── Upload Zone ───────────────────────────────────────────────────────────────
+// ── Upload Zone ─────────────────────────────────────────────────────────────
 function UploadZone({onExtracted,setLoading,loading}) {
   const [drag,setDrag]=useState(false)
   const [error,setError]=useState(null)
@@ -165,38 +181,36 @@ function UploadZone({onExtracted,setLoading,loading}) {
         onDragOver={e=>{e.preventDefault();setDrag(true)}}
         onDragLeave={()=>setDrag(false)}
         onDrop={e=>{e.preventDefault();setDrag(false);handleFile(e.dataTransfer.files[0])}}
-        style={{border:`2px dashed ${drag?T.teal:T.border}`,borderRadius:16,
-          padding:'3rem 2rem',textAlign:'center',cursor:'pointer',
-          background:drag?'rgba(0,200,180,.05)':'rgba(255,255,255,.02)',
-          transition:'all .2s'}}>
-        
-        <div style={{width:64,height:64,borderRadius:20,margin:'0 auto 1.25rem',
-          background:drag?T.grad:'rgba(255,255,255,.05)',border:`1px solid ${drag?'transparent':T.border}`,
-          boxShadow:drag?'0 10px 25px rgba(0,200,180,.2)':'none',
+        style={{border:`2px dashed ${drag?T.teal:T.border}`,borderRadius:14,
+          padding:'2.75rem 1.5rem',textAlign:'center',cursor:'pointer',
+          background:drag?'rgba(0,200,180,.06)':'rgba(255,255,255,.02)',
+          transition:'all .25s',position:'relative',overflow:'hidden'}}>
+        {drag&&<div style={{position:'absolute',inset:0,pointerEvents:'none',
+          background:'radial-gradient(ellipse 60% 60% at 50% 50%,rgba(0,200,180,.08),transparent)'}}/>}
+        <div style={{width:56,height:56,borderRadius:16,margin:'0 auto 1rem',
+          background:drag?T.grad:'rgba(255,255,255,.06)',border:`1px solid ${drag?'transparent':T.border}`,
           display:'flex',alignItems:'center',justifyContent:'center',transition:'all .25s'}}>
-          <Upload size={28} color={drag?'#fff':T.teal}/>
+          <Upload size={24} color={drag?'#fff':T.teal}/>
         </div>
-
         {fileName&&!loading ? (
-          <><p style={{fontWeight:800,fontSize:'1.1rem',color:T.navy,fontFamily:'var(--font-head)'}}>{fileName}</p>
-          <p style={{fontSize:'.9rem',color:T.success,marginTop:'.4rem',fontWeight:600}}>Extracted successfully ↓</p></>
+          <><p style={{fontWeight:700,fontSize:'1rem',color:T.teal,fontFamily:'var(--font-head)'}}>{fileName}</p>
+          <p style={{fontSize:'.82rem',color:T.muted,marginTop:'.35rem'}}>Extracted — review figures below ↓</p></>
         ) : loading ? (
-          <><p style={{fontWeight:800,color:T.navy,fontSize:'1.1rem',fontFamily:'var(--font-head)'}}>Extracting data…</p>
-          <p style={{fontSize:'.9rem',color:T.muted,marginTop:'.4rem'}}>Running secure OCR</p></>
+          <><p style={{fontWeight:700,color:T.white,fontFamily:'var(--font-head)'}}>Extracting with AI…</p>
+          <p style={{fontSize:'.82rem',color:T.muted,marginTop:'.35rem'}}>Analyzing document layout</p></>
         ) : (
-          <><p style={{fontWeight:800,fontSize:'1.1rem',color:T.navy,fontFamily:'var(--font-head)'}}>
-            Drop statement PDF here</p>
-          <p style={{fontSize:'.9rem',color:T.muted,marginTop:'.4rem'}}>
-            Click to browse for a PDF or image file.</p></>
+          <><p style={{fontWeight:700,fontSize:'1rem',color:T.white,fontFamily:'var(--font-head)'}}>
+            Drop your bank statement here</p>
+          <p style={{fontSize:'.82rem',color:T.muted,marginTop:'.4rem'}}>
+            PDF or scanned image (PNG, JPG, TIFF) · Click to browse</p></>
         )}
         <input ref={ref} type="file" accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp,.webp"
           style={{display:'none'}} onChange={e=>handleFile(e.target.files[0])}/>
       </div>
-      
       {error&&(
-        <div style={{marginTop:'1rem',display:'flex',gap:'.6rem',alignItems:'flex-start',
-          color:'#fca5a5',background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.3)',
-          borderRadius:12,padding:'1rem',fontSize:'.85rem'}}>
+        <div style={{marginTop:'.85rem',display:'flex',gap:'.6rem',alignItems:'flex-start',
+          color:'#fca5a5',background:'rgba(239,68,68,.12)',border:'1px solid rgba(239,68,68,.25)',
+          borderRadius:10,padding:'.65rem 1rem',fontSize:'.85rem'}}>
           <AlertCircle size={16} style={{flexShrink:0,marginTop:1}}/>{error}
         </div>
       )}
@@ -204,166 +218,169 @@ function UploadZone({onExtracted,setLoading,loading}) {
   )
 }
 
-// ── Step 3: Analysis Dashboard (Dark Theme Revert) ─────────────────────────
+// ── Table helpers ─────────────────────────────────────────────────────────────
+const ltbl = { width:'100%', borderCollapse:'collapse', fontSize:'.9rem', textAlign:'left', background:'rgba(255,255,255,.01)' }
+const ThD = ({children}) => <th style={{padding:'1rem 1.5rem',color:'#94a3b8',fontWeight:800,fontSize:'.72rem',textTransform:'uppercase',borderBottom:'1px solid rgba(255,255,255,.1)',letterSpacing:'.05em'}}>{children}</th>
+const TdD = ({children,bold,color}) => <td style={{padding:'1rem 1.5rem',color:color||'#ffffff',fontWeight:bold?800:500,fontFamily:'monospace',fontSize:'.9rem'}}>{children}</td>
+
+// ── Analysis Dashboard (Step 3) ─────────────────────────────────────────────
 function AnalysisDashboard({result}) {
   const pos = result.savings >= 0
   const isStrong = result.diff_pct > 5
 
   return (
-    <div style={{background:'rgba(10,22,40,0.8)', borderRadius:16, border:`1px solid rgba(255,255,255,.1)`, overflow:'hidden', color:'#fff', fontFamily:'var(--font-head)'}}>
+    <div style={{background:'rgba(255,255,255,.04)',borderRadius:18,border:'1px solid rgba(255,255,255,.1)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',overflow:'hidden',color:'#ffffff',fontFamily:'var(--font-head)'}}>
+
       {/* Header */}
-      <div style={{padding:'1.5rem 2rem', borderBottom:'1px solid rgba(255,255,255,.1)', display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
+      <div style={{padding:'1.5rem 2rem',borderBottom:'1px solid rgba(255,255,255,.1)',display:'flex',justifyContent:'space-between',alignItems:'flex-start',background:'rgba(255,255,255,.02)'}}>
         <div>
-          <h2 style={{fontSize:'1.4rem', fontWeight:900, textTransform:'uppercase', color:'#fff', letterSpacing:'.03em', marginBottom:'.2rem'}}>
+          <h2 style={{fontSize:'1.4rem',fontWeight:900,textTransform:'uppercase',color:'#ffffff',letterSpacing:'.03em',marginBottom:'.2rem'}}>
             {result.existing_merchant || 'UNNAMED MERCHANT'}
           </h2>
-          <p style={{fontSize:'.85rem', color:'#94a3b8', fontWeight:500}}>
-            Statement Date • Saved Today
+          <p style={{fontSize:'.85rem',color:'#94a3b8',fontWeight:500}}>
+            Statement Analysis • Adit Pay Comparison
           </p>
         </div>
+        {isStrong && (
+          <span style={{background:'rgba(16,185,129,.15)',border:'1px solid rgba(16,185,129,.35)',color:'#34d399',fontSize:'.7rem',fontWeight:800,padding:'6px 14px',borderRadius:100,textTransform:'uppercase',letterSpacing:'.06em',alignSelf:'center'}}>
+            ● Strong Opportunity
+          </span>
+        )}
       </div>
 
-      <div style={{padding:'2rem'}}>
-        {/* AI Summary Block */}
-        <div style={{background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:16, padding:'1.5rem', marginBottom:'2rem', boxShadow:'0 10px 25px rgba(0,0,0,0.2)'}}>
-          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem'}}>
-            <span style={{fontSize:'.75rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'.1em', color:'#94a3b8'}}>
+      <div style={{padding:'2rem',display:'flex',flexDirection:'column',gap:'1.5rem'}}>
+
+        {/* AI Summary */}
+        <div style={{background:'rgba(0,200,180,.06)',border:'1px solid rgba(0,200,180,.2)',borderRadius:16,padding:'1.75rem'}}>
+          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:'1rem'}}>
+            <Sparkles size={13} color="#00c8b4"/>
+            <span style={{fontSize:'.72rem',fontWeight:800,textTransform:'uppercase',letterSpacing:'.1em',color:'#00c8b4'}}>
               AI Summary
             </span>
-            {isStrong && (
-              <span style={{background:'rgba(16,185,129,0.2)', color:'#34d399', fontSize:'.7rem', fontWeight:800, padding:'4px 10px', borderRadius:100, textTransform:'uppercase', letterSpacing:'.05em'}}>
-                ● Strong Opportunity
-              </span>
-            )}
           </div>
-          
-          <p style={{fontSize:'.95rem', lineHeight:1.6, color:'#f1f5f9', fontWeight:400, marginBottom:'2rem'}}>
-            <strong style={{fontWeight:800, color:'#fff'}}>{result.existing_merchant || 'The merchant'}</strong> currently pays{' '}
-            <strong style={{color:'#fbbf24'}}>${fmt(result.total_fees_paid)}/month</strong> to their existing processor at a{' '}
-            <strong style={{color:'#fbbf24'}}>{fmt(result.existing_avg_fee_pct)}% effective rate</strong>. Switching to Adit Pay's flat-rate pricing brings that down to{' '}
-            <strong style={{color:'#34d399'}}>${fmt(result.adit_total_fee)}/month</strong> — a{' '}
-            <strong style={{color:'#34d399'}}>{fmt(result.diff_pct)}% reduction</strong> worth{' '}
-            <strong style={{color:'#34d399'}}>${fmt(result.savings)}/month</strong> in real cash back to the practice.
+          <p style={{fontSize:'.95rem',lineHeight:1.7,color:'#ffffff',fontWeight:400,fontFamily:'var(--font-body)'}}>
+            {result.ai_summary}
           </p>
+        </div>
 
-          <div style={{display:'flex', gap:'2rem', marginBottom:'2rem'}}>
-            <div style={{flex:1}}>
-              <p style={{fontSize:'.7rem', fontWeight:800, textTransform:'uppercase', color:'#94a3b8', marginBottom:'.5rem', letterSpacing:'.05em'}}>Current Fees</p>
-              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'.4rem'}}>
-                <span style={{fontSize:'1.1rem', fontWeight:800}}>${fmt(result.total_fees_paid)} <span style={{fontSize:'.75rem', color:'#94a3b8', fontWeight:600}}>({fmt(result.existing_avg_fee_pct)}%)</span></span>
-              </div>
-              <div style={{height:6, background:'rgba(255,255,255,0.1)', borderRadius:3, overflow:'hidden'}}>
-                <div style={{width:'100%', height:'100%', background:'#fbbf24', borderRadius:3}}/>
-              </div>
-            </div>
-            
-            <div style={{flex:1}}>
-              <p style={{fontSize:'.7rem', fontWeight:800, textTransform:'uppercase', color:'#94a3b8', marginBottom:'.5rem', letterSpacing:'.05em'}}>Adit Pay Fees</p>
-              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'.4rem'}}>
-                <span style={{fontSize:'1.1rem', fontWeight:800}}>${fmt(result.adit_total_fee)} <span style={{fontSize:'.75rem', color:'#94a3b8', fontWeight:600}}>({fmt(result.adit_avg_fee_pct)}%)</span></span>
-              </div>
-              <div style={{height:6, background:'rgba(255,255,255,0.1)', borderRadius:3, overflow:'hidden'}}>
-                <div style={{width:`${Math.max(10, 100 - result.diff_pct)}%`, height:'100%', background:'#34d399', borderRadius:3}}/>
-              </div>
+        {/* Fee Comparison Bars */}
+        <div style={{display:'flex',gap:'1.25rem',flexWrap:'wrap'}}>
+          <div style={{flex:1,minWidth:200,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.1)',borderRadius:14,padding:'1.25rem'}}>
+            <p style={{fontSize:'.7rem',fontWeight:800,textTransform:'uppercase',color:'#94a3b8',marginBottom:'.7rem',letterSpacing:'.05em'}}>Current Fees</p>
+            <p style={{fontSize:'1.3rem',fontWeight:800,color:'#ffffff',marginBottom:'.6rem'}}>
+              ${fmt(result.total_fees_paid)} <span style={{fontSize:'.78rem',color:'#94a3b8',fontWeight:600}}>({fmt(result.existing_avg_fee_pct)}%)</span>
+            </p>
+            <div style={{height:6,background:'rgba(255,255,255,.1)',borderRadius:3,overflow:'hidden'}}>
+              <div style={{width:'100%',height:'100%',background:'#fbbf24',borderRadius:3}}/>
             </div>
           </div>
-
-          <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'1rem'}}>
-            <div style={{background:'rgba(255,255,255,0.04)', borderRadius:12, padding:'1rem', textAlign:'center'}}>
-              <p style={{fontSize:'1.2rem', fontWeight:800, color:'#34d399'}}>${fmt(result.savings_1_yr, 0)}</p>
-              <p style={{fontSize:'.7rem', fontWeight:800, textTransform:'uppercase', color:'#94a3b8', letterSpacing:'.05em', marginTop:'.2rem'}}>1 Year Savings</p>
-            </div>
-            <div style={{background:'rgba(255,255,255,0.04)', borderRadius:12, padding:'1rem', textAlign:'center'}}>
-              <p style={{fontSize:'1.2rem', fontWeight:800, color:'#34d399'}}>${fmt(result.savings_3_yr, 0)}</p>
-              <p style={{fontSize:'.7rem', fontWeight:800, textTransform:'uppercase', color:'#94a3b8', letterSpacing:'.05em', marginTop:'.2rem'}}>3 Years Savings</p>
-            </div>
-            <div style={{background:'rgba(255,255,255,0.04)', borderRadius:12, padding:'1rem', textAlign:'center'}}>
-              <p style={{fontSize:'1.2rem', fontWeight:800, color:'#34d399'}}>${fmt(result.savings_5_yr, 0)}</p>
-              <p style={{fontSize:'.7rem', fontWeight:800, textTransform:'uppercase', color:'#94a3b8', letterSpacing:'.05em', marginTop:'.2rem'}}>5 Years Savings</p>
+          <div style={{flex:1,minWidth:200,background:'rgba(0,200,180,.06)',border:'1px solid rgba(0,200,180,.22)',borderRadius:14,padding:'1.25rem'}}>
+            <p style={{fontSize:'.7rem',fontWeight:800,textTransform:'uppercase',color:'#00c8b4',marginBottom:'.7rem',letterSpacing:'.05em'}}>Adit Pay Fees</p>
+            <p style={{fontSize:'1.3rem',fontWeight:800,color:'#ffffff',marginBottom:'.6rem'}}>
+              ${fmt(result.adit_total_fee)} <span style={{fontSize:'.78rem',color:'#94a3b8',fontWeight:600}}>({fmt(result.adit_avg_fee_pct)}%)</span>
+            </p>
+            <div style={{height:6,background:'rgba(255,255,255,.1)',borderRadius:3,overflow:'hidden'}}>
+              <div style={{width:`${Math.max(10, 100 - result.diff_pct)}%`,height:'100%',background:'#00c8b4',borderRadius:3}}/>
             </div>
           </div>
         </div>
 
-        {/* Summary Bar */}
-        <div style={{background:'rgba(0,0,0,0.2)', border:'1px solid rgba(255,255,255,0.05)', borderRadius:16, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'1.5rem 2rem', marginBottom:'2rem', color:'#fff'}}>
-          <div>
-            <p style={{fontSize:'.75rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em'}}>Total Volume</p>
-            <p style={{fontSize:'1.5rem', fontWeight:900, marginTop:'.2rem'}}>${fmt(result.total_amount)}</p>
-          </div>
-          <div>
-            <p style={{fontSize:'.75rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em'}}>Transactions</p>
-            <p style={{fontSize:'1.5rem', fontWeight:900, marginTop:'.2rem'}}>{fmt(result.total_count, 0)}</p>
-          </div>
-          <div>
-            <p style={{fontSize:'.75rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em'}}>Fees Paid</p>
-            <p style={{fontSize:'1.5rem', fontWeight:900, color:'#fbbf24', marginTop:'.2rem'}}>${fmt(result.total_fees_paid)}</p>
-          </div>
-          <div>
-            <p style={{fontSize:'.75rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em'}}>Adit Pay Fees</p>
-            <p style={{fontSize:'1.5rem', fontWeight:900, color:'#34d399', marginTop:'.2rem'}}>${fmt(result.adit_total_fee)}</p>
-          </div>
-          <div>
-            <p style={{fontSize:'.75rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.05em'}}>Monthly Savings</p>
-            <p style={{fontSize:'1.5rem', fontWeight:900, color:'#34d399', marginTop:'.2rem'}}>${fmt(result.savings)}</p>
-          </div>
+        {/* Savings Projections */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'1rem'}}>
+          {[['1 Yr Savings', result.savings_1_yr],['3 Yr Savings', result.savings_3_yr],['5 Yr Savings', result.savings_5_yr]].map(([label,val])=>(
+            <div key={label} style={{background:'rgba(16,185,129,.08)',border:'1px solid rgba(16,185,129,.22)',borderRadius:12,padding:'1.1rem',textAlign:'center'}}>
+              <p style={{fontSize:'1.25rem',fontWeight:800,color:'#34d399'}}>${fmt(val, 0)}</p>
+              <p style={{fontSize:'.7rem',fontWeight:800,textTransform:'uppercase',color:'#94a3b8',letterSpacing:'.05em',marginTop:'.25rem'}}>{label}</p>
+            </div>
+          ))}
         </div>
 
-        {/* Detailed Component Tables */}
-        <div style={{border:'1px solid rgba(255,255,255,0.1)', borderRadius:16, marginBottom:'2rem', overflow:'hidden'}}>
-          <div style={{background:'rgba(255,255,255,0.05)', padding:'1rem 1.5rem', borderBottom:'1px solid rgba(255,255,255,0.1)', display:'flex', alignItems:'center', gap:'.5rem'}}>
-            <FileText size={16} color="#94a3b8"/>
-            <span style={{fontSize:'.9rem', fontWeight:800, color:'#fff'}}>Existing Merchant</span>
+        {/* Stats Bar */}
+        <div style={{background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.1)',borderRadius:14,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'1.25rem 2rem',flexWrap:'wrap',gap:'1.5rem'}}>
+          {[
+            ['Total Volume',`$${fmt(result.total_amount)}`,'#ffffff'],
+            ['Transactions',fmt(result.total_count, 0),'#ffffff'],
+            ['Avg Fee %',`${fmt(result.existing_avg_fee_pct)}%`,'#fbbf24'],
+            ['Monthly Savings',`$${fmt(result.savings)}`,'#34d399']
+          ].map(([lbl,val,clr])=>(
+            <div key={lbl}>
+              <p style={{fontSize:'.72rem',fontWeight:800,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'.05em'}}>{lbl}</p>
+              <p style={{fontSize:'1.5rem',fontWeight:900,color:clr,marginTop:'.15rem'}}>{val}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Existing Merchant Table */}
+        <div style={{border:'1px solid rgba(255,255,255,.1)',borderRadius:14,overflow:'hidden'}}>
+          <div style={{background:'rgba(255,255,255,.04)',padding:'1rem 1.5rem',borderBottom:'1px solid rgba(255,255,255,.1)',display:'flex',alignItems:'center',gap:'.5rem'}}>
+            <FileText size={15} color="#00c8b4"/>
+            <span style={{fontSize:'.88rem',fontWeight:800,color:'#ffffff'}}>Existing Merchant</span>
           </div>
           <table style={ltbl}>
-            <thead><tr><ThL>Merchant</ThL><ThL>Trn Amt</ThL><ThL>Count</ThL><ThL>Fee Paid</ThL><ThL>Avg %</ThL><ThL>% of Trn</ThL></tr></thead>
+            <thead><tr><ThD>Merchant</ThD><ThD>Trn Amt</ThD><ThD>Count</ThD><ThD>Fee Paid</ThD><ThD>Avg %</ThD><ThD>% of Trn</ThD></tr></thead>
             <tbody>
-              <tr><TdL bold>{result.existing_merchant}</TdL><TdL>${fmt(result.total_amount)}</TdL><TdL>{fmt(result.total_count, 0)}</TdL><TdL bold color="#fbbf24">${fmt(result.total_fees_paid)}</TdL><TdL>{fmt(result.existing_avg_fee_pct)}%</TdL><TdL>100%</TdL></tr>
+              <tr>
+                <TdD bold>{result.existing_merchant}</TdD>
+                <TdD>${fmt(result.total_amount)}</TdD>
+                <TdD>{fmt(result.total_count, 0)}</TdD>
+                <TdD bold color="#fbbf24">${fmt(result.total_fees_paid)}</TdD>
+                <TdD>{fmt(result.existing_avg_fee_pct)}%</TdD>
+                <TdD>100%</TdD>
+              </tr>
             </tbody>
           </table>
         </div>
 
-        <div style={{border:'1px solid rgba(255,255,255,0.1)', borderRadius:16, marginBottom:'2rem', overflow:'hidden'}}>
-          <div style={{background:'rgba(245,158,11,0.15)', borderTop:'2px solid rgba(245,158,11,0.5)', padding:'1rem 1.5rem', borderBottom:'1px solid rgba(255,255,255,0.1)', display:'flex', alignItems:'center', gap:'.5rem'}}>
-            <Sparkles size={16} color="#fbbf24"/>
-            <span style={{fontSize:'.9rem', fontWeight:800, color:'#fbbf24'}}>Adit Pay Target Pricing</span>
+        {/* Adit Pay Table */}
+        <div style={{border:'1px solid rgba(0,200,180,.25)',borderRadius:14,overflow:'hidden'}}>
+          <div style={{background:'linear-gradient(135deg,#00c8b4 0%,#2563eb 100%)',padding:'1rem 1.5rem',display:'flex',alignItems:'center',gap:'.5rem'}}>
+            <Sparkles size={15} color="#fff"/>
+            <span style={{fontSize:'.88rem',fontWeight:800,color:'#fff'}}>Adit Pay Pricing</span>
           </div>
           <table style={ltbl}>
-            <thead><tr><ThL>Type</ThL><ThL>Trn Amt</ThL><ThL>Count</ThL><ThL>Fee Paid</ThL><ThL>Rate</ThL><ThL>% of Trn</ThL></tr></thead>
+            <thead><tr><ThD>Type</ThD><ThD>Trn Amt</ThD><ThD>Count</ThD><ThD>Fee</ThD><ThD>Rate</ThD></tr></thead>
             <tbody>
               {result.adit_rows.map((r,i)=>(
-                <tr key={i} style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-                  <TdL>{r.type}</TdL>
-                  <TdL>${fmt(r.amount)}</TdL>
-                  <TdL>{fmt(r.count, 1)}</TdL>
-                  <TdL>${fmt(r.total_fee)}</TdL>
-                  <TdL><span style={{background:'rgba(255,255,255,0.1)', padding:'2px 8px', borderRadius:100, fontSize:'.8rem'}}>{r.rate_label}</span></TdL>
-                  <TdL>{i===0?'90%':'10%'}</TdL>
+                <tr key={i} style={{borderBottom:'1px solid rgba(255,255,255,.07)'}}>
+                  <TdD>{r.type}</TdD>
+                  <TdD>${fmt(r.amount)}</TdD>
+                  <TdD>{fmt(r.count, 1)}</TdD>
+                  <TdD>${fmt(r.total_fee)}</TdD>
+                  <TdD>{r.rate_label}</TdD>
                 </tr>
               ))}
-              <tr style={{background:'rgba(255,255,255,0.03)'}}>
-                <TdL bold>Total</TdL>
-                <TdL bold>${fmt(result.total_amount)}</TdL>
-                <TdL bold>{fmt(result.total_count, 0)}</TdL>
-                <TdL bold color="#34d399">${fmt(result.adit_total_fee)}</TdL>
-                <TdL bold>{fmt(result.adit_avg_fee_pct)}%</TdL>
-                <TdL bold>100%</TdL>
+              <tr style={{background:'rgba(0,200,180,.06)'}}>
+                <TdD bold>Total</TdD>
+                <TdD bold>${fmt(result.total_amount)}</TdD>
+                <TdD bold>{fmt(result.total_count, 0)}</TdD>
+                <TdD bold color="#34d399">${fmt(result.adit_total_fee)}</TdD>
+                <TdD bold>{fmt(result.adit_avg_fee_pct)}%</TdD>
               </tr>
             </tbody>
           </table>
         </div>
 
         {/* Hero Savings Block */}
-        <div style={{background:pos ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border:pos ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(239,68,68,0.3)', borderRadius:16, padding:'2.5rem', display:'flex', justifyContent:'space-between', alignItems:'flex-end'}}>
+        <div style={{
+          background: pos
+            ? 'linear-gradient(135deg,rgba(16,185,129,.15) 0%,rgba(0,200,180,.08) 100%)'
+            : 'linear-gradient(135deg,rgba(239,68,68,.15) 0%,rgba(239,68,68,.06) 100%)',
+          border: pos ? '1px solid rgba(16,185,129,.35)' : '1px solid rgba(239,68,68,.35)',
+          borderRadius:16,padding:'2.25rem 2.5rem',
+          display:'flex',justifyContent:'space-between',alignItems:'flex-end'
+        }}>
           <div>
-            <p style={{fontSize:'.85rem', fontWeight:800, textTransform:'uppercase', color:pos ? '#34d399' : '#f87171', letterSpacing:'.05em'}}>
+            <p style={{fontSize:'.82rem',fontWeight:800,textTransform:'uppercase',letterSpacing:'.06em',color:pos?'#34d399':'#f87171'}}>
               Total {pos ? 'Savings' : 'Cost'} with Adit Pay
             </p>
-            <p style={{fontSize:'4.5rem', fontWeight:900, color:pos ? '#34d399' : '#f87171', lineHeight:1, marginTop:'.5rem', letterSpacing:'-.03em'}}>
+            <p style={{fontSize:'4rem',fontWeight:900,color:pos?'#34d399':'#f87171',lineHeight:1,marginTop:'.4rem',fontFamily:'var(--font-head)'}}>
               ${fmt(Math.abs(result.savings))}
             </p>
-            <p style={{fontSize:'.95rem', color:pos ? '#34d399' : '#f87171', fontWeight:600, marginTop:'.5rem'}}>
-              this month • ${fmt(Math.abs(result.savings_1_yr))} annually
-            </p>
+            <p style={{fontSize:'.85rem',color:'#94a3b8',marginTop:'.5rem'}}>per month vs. current processor</p>
+          </div>
+          <div style={{textAlign:'right'}}>
+            <p style={{fontSize:'.72rem',fontWeight:800,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:'.35rem'}}>Fee Reduction</p>
+            <p style={{fontSize:'2rem',fontWeight:900,color:pos?'#00c8b4':'#f87171'}}>{fmt(result.diff_pct)}%</p>
           </div>
         </div>
 
@@ -371,10 +388,6 @@ function AnalysisDashboard({result}) {
     </div>
   )
 }
-
-const ltbl = { width:'100%', borderCollapse:'collapse', fontSize:'.9rem', textAlign:'left' }
-const ThL = ({children}) => <th style={{padding:'1rem 1.5rem', color:'#94a3b8', fontWeight:800, fontSize:'.75rem', textTransform:'uppercase', letterSpacing:'.05em', borderBottom:'1px solid rgba(255,255,255,.1)'}}>{children}</th>
-const TdL = ({children, bold, color}) => <td style={{padding:'1rem 1.5rem', color: color || '#fff', fontWeight: bold ? 800 : 500, fontFamily:'monospace', fontSize:'.95rem'}}>{children}</td>
 
 // ── Global History Dashboard Tab ──────────────────────────────────────────────
 function HistoryDashboard() {
@@ -387,13 +400,13 @@ function HistoryDashboard() {
       .then(d => { setHistory(d.history || []); setLoading(false) })
   }, [])
 
-  if (loading) return <div style={{textAlign:'center', padding:'4rem', color:T.muted}}>Loading history database...</div>
+  if (loading) return <div style={{textAlign:'center', padding:'4rem', color:'#94a3b8'}}>Loading history database...</div>
   if (history.length === 0) return (
-    <Card style={{textAlign:'center', padding:'4rem 2rem'}}>
+    <GlassCard style={{textAlign:'center', padding:'4rem 2rem'}}>
       <Search size={48} color="rgba(255,255,255,.1)" style={{margin:'0 auto 1rem'}}/>
       <h3 style={{fontSize:'1.2rem', fontWeight:800, color:'#fff'}}>No analyses found</h3>
-      <p style={{color:T.muted, marginTop:'.5rem'}}>Upload a statement on the Analyzer tab to begin tracking history.</p>
-    </Card>
+      <p style={{color:'#94a3b8', marginTop:'.5rem'}}>Upload a statement on the Analyzer tab to begin tracking history.</p>
+    </GlassCard>
   )
 
   const wins = history.filter(h => h.savings >= 0)
@@ -404,36 +417,42 @@ function HistoryDashboard() {
     <div style={{display:'flex', flexDirection:'column', gap:'1.5rem'}}>
       {/* Global KPIs */}
       <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'1.5rem'}}>
-        <Card style={{padding:'1.75rem'}}>
-          <p style={{fontSize:'.8rem', fontWeight:800, color:T.muted, textTransform:'uppercase'}}>Total Pitches</p>
+        <GlassCard style={{padding:'1.75rem'}}>
+          <p style={{fontSize:'.8rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase'}}>Total Pitches</p>
           <p style={{fontSize:'2.5rem', fontWeight:900, color:'#fff', marginTop:'.2rem'}}>{history.length}</p>
-        </Card>
-        <Card style={{padding:'1.75rem'}}>
-          <p style={{fontSize:'.8rem', fontWeight:800, color:T.muted, textTransform:'uppercase'}}>Win Rate</p>
+        </GlassCard>
+        <GlassCard style={{padding:'1.75rem'}}>
+          <p style={{fontSize:'.8rem', fontWeight:800, color:'#94a3b8', textTransform:'uppercase'}}>Win Rate</p>
           <p style={{fontSize:'2.5rem', fontWeight:900, color:'#60a5fa', marginTop:'.2rem'}}>{fmt(winRate, 0)}%</p>
-        </Card>
-        <Card style={{padding:'1.75rem', background:'rgba(16,185,129,.1)', borderColor:'rgba(16,185,129,.3)'}}>
-          <p style={{fontSize:'.8rem', fontWeight:800, color:'#34d399', textTransform:'uppercase'}}>Total Monthly Savings Found</p>
+        </GlassCard>
+        <GlassCard style={{padding:'1.75rem', background:'rgba(16,185,129,.1)', borderColor:'rgba(16,185,129,.3)'}}>
+          <p style={{fontSize:'.8rem', fontWeight:800, color:'#34d399', textTransform:'uppercase'}}>Total Monthly Savings</p>
           <p style={{fontSize:'2.5rem', fontWeight:900, color:'#34d399', marginTop:'.2rem'}}>${fmt(totalSavings, 0)}</p>
-        </Card>
+        </GlassCard>
       </div>
 
-      <Card style={{padding:0, overflow:'hidden'}}>
-        <div style={{padding:'1.5rem 2rem', borderBottom:`1px solid rgba(255,255,255,.1)`}}>
+      <GlassCard style={{padding:0, overflow:'hidden'}}>
+        <div style={{padding:'1.5rem 2rem', borderBottom:'1px solid rgba(255,255,255,.1)'}}>
           <h3 style={{fontSize:'1.1rem', fontWeight:800, color:'#fff'}}>Historical Log</h3>
         </div>
-        <table style={ltbl}>
+        <table style={{...ltbl, color:'#fff'}}>
           <thead>
-            <tr><ThL>Date</ThL><ThL>Merchant</ThL><ThL>Volume</ThL><ThL>Savings</ThL><ThL>Status</ThL></tr>
+            <tr>
+              <th style={{padding:'1rem 1.5rem', color:'#94a3b8', fontWeight:800, fontSize:'.75rem', textTransform:'uppercase', borderBottom:'1px solid rgba(255,255,255,.1)'}}>Date</th>
+              <th style={{padding:'1rem 1.5rem', color:'#94a3b8', fontWeight:800, fontSize:'.75rem', textTransform:'uppercase', borderBottom:'1px solid rgba(255,255,255,.1)'}}>Merchant</th>
+              <th style={{padding:'1rem 1.5rem', color:'#94a3b8', fontWeight:800, fontSize:'.75rem', textTransform:'uppercase', borderBottom:'1px solid rgba(255,255,255,.1)'}}>Volume</th>
+              <th style={{padding:'1rem 1.5rem', color:'#94a3b8', fontWeight:800, fontSize:'.75rem', textTransform:'uppercase', borderBottom:'1px solid rgba(255,255,255,.1)'}}>Savings</th>
+              <th style={{padding:'1rem 1.5rem', color:'#94a3b8', fontWeight:800, fontSize:'.75rem', textTransform:'uppercase', borderBottom:'1px solid rgba(255,255,255,.1)'}}>Status</th>
+            </tr>
           </thead>
           <tbody>
             {history.map(h => (
-              <tr key={h.id} style={{borderBottom:`1px solid rgba(255,255,255,.05)`}}>
-                <TdL color={T.muted}>{new Date(h.created_at).toLocaleDateString()}</TdL>
-                <TdL bold>{h.merchant || 'Unknown'}</TdL>
-                <TdL>${fmt(h.total_amount)}</TdL>
-                <TdL bold color={h.savings >= 0 ? '#34d399' : '#f87171'}>${fmt(h.savings)}</TdL>
-                <TdL>
+              <tr key={h.id} style={{borderBottom:'1px solid rgba(255,255,255,.05)'}}>
+                <td style={{padding:'1rem 1.5rem', color:'#94a3b8', fontFamily:'monospace'}}>{new Date(h.created_at).toLocaleDateString()}</td>
+                <td style={{padding:'1rem 1.5rem', fontWeight:800, color:'#fff'}}>{h.merchant || 'Unknown'}</td>
+                <td style={{padding:'1rem 1.5rem', fontFamily:'monospace', color:'#fff'}}>${fmt(h.total_amount)}</td>
+                <td style={{padding:'1rem 1.5rem', fontWeight:800, fontFamily:'monospace', color: h.savings >= 0 ? '#34d399' : '#f87171'}}>${fmt(h.savings)}</td>
+                <td style={{padding:'1rem 1.5rem'}}>
                   <span style={{
                     padding:'4px 10px', borderRadius:100, fontSize:'.75rem', fontWeight:800,
                     background: h.savings >= 0 ? 'rgba(16,185,129,.2)' : 'rgba(239,68,68,.2)',
@@ -441,41 +460,54 @@ function HistoryDashboard() {
                   }}>
                     {h.savings >= 0 ? 'WON' : 'FAILED'}
                   </span>
-                </TdL>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </Card>
+      </GlassCard>
     </div>
   )
 }
 
-// ── User Menu ─────────────────────────────────────────────────────────────────
+// ── User Dropdown ────────────────────────────────────────────────────────────
 function UserMenu({user}) {
   const [open,setOpen]=useState(false)
-  
+  const initials=user.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)
   return (
     <div style={{position:'relative'}}>
-      <button onClick={()=>setOpen(!open)}
-        style={{display:'flex',alignItems:'center',gap:8,background:'rgba(255,255,255,.1)',
-          border:`1px solid rgba(255,255,255,.2)`,lineHeight:'1.2',borderRadius:100,padding:'6px 12px',
-          cursor:'pointer', fontWeight:600, color:'#fff'}}>
-        {user.name} <ChevronDown size={14} color={T.muted}/>
+      <button onClick={()=>setOpen(o=>!o)}
+        style={{display:'flex',alignItems:'center',gap:8,background:'rgba(255,255,255,.08)',
+          border:`1px solid rgba(255,255,255,.1)`,borderRadius:100,padding:'5px 10px 5px 5px',
+          cursor:'pointer',transition:'background .2s'}}
+        onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,.13)'}
+        onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,.08)'}>
+        {user.picture
+          ? <img src={user.picture} alt={user.name} style={{width:28,height:28,borderRadius:'50%',objectFit:'cover'}}/>
+          : <div style={{width:28,height:28,borderRadius:'50%',background:'linear-gradient(135deg,#00c8b4 0%,#2563eb 100%)',
+              display:'flex',alignItems:'center',justifyContent:'center',
+              fontSize:'.72rem',fontWeight:800,color:'#fff',fontFamily:'var(--font-head)'}}>
+              {initials}
+            </div>
+        }
+        <span style={{fontSize:'.8rem',fontWeight:600,color:'#ffffff',fontFamily:'var(--font-head)'}}>
+          {user.name}
+        </span>
+        <ChevronDown size={13} color="#94a3b8"/>
       </button>
       {open&&(
         <>
           <div onClick={()=>setOpen(false)} style={{position:'fixed',inset:0,zIndex:50}}/>
           <div style={{position:'absolute',right:0,top:'calc(100% + 8px)',zIndex:100,
-            background:'#0f172a',border:`1px solid rgba(255,255,255,.1)`,borderRadius:12,
-            padding:'8px',minWidth:220,boxShadow:'0 10px 25px rgba(0,0,0,.5)'}}>
-            <div style={{padding:'8px 12px',borderBottom:`1px solid rgba(255,255,255,.1)`,marginBottom:4}}>
-              <p style={{fontSize:'.85rem',fontWeight:700,color:'#fff'}}>{user.name}</p>
-              <p style={{fontSize:'.75rem',color:T.muted,marginTop:2}}>{user.email}</p>
+            background:'#0f2044',border:'1px solid rgba(255,255,255,.1)',borderRadius:12,
+            padding:'6px',minWidth:220,boxShadow:'0 8px 32px rgba(0,0,0,.4)'}}>
+            <div style={{padding:'10px 12px',borderBottom:'1px solid rgba(255,255,255,.1)',marginBottom:4}}>
+              <p style={{fontSize:'.82rem',fontWeight:700,color:'#ffffff',fontFamily:'var(--font-head)'}}>{user.name}</p>
+              <p style={{fontSize:'.75rem',color:'#00c8b4',marginTop:2}}>{user.email}</p>
             </div>
             <a href={`${API}/auth/logout`} style={{display:'flex',alignItems:'center',gap:8,
-              padding:'8px 12px',borderRadius:8,textDecoration:'none',color:'#ef4444',
-              fontSize:'.85rem',fontWeight:600}}
+              padding:'8px 12px',borderRadius:8,textDecoration:'none',color:'#fca5a5',
+              fontSize:'.82rem',fontWeight:600,fontFamily:'var(--font-head)'}}
               onMouseEnter={e=>e.currentTarget.style.background='rgba(239,68,68,.1)'}
               onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
               <LogOut size={14}/> Sign out
@@ -487,15 +519,15 @@ function UserMenu({user}) {
   )
 }
 
-// ── Main App Routing ──────────────────────────────────────────────────────────
+// ── Main App Component ───────────────────────────────────────────────────────
 export default function App() {
   const [authState,setAuthState]=useState({loading:true,authenticated:false,user:null})
-  const [tab, setTab] = useState('analyzer') // 'analyzer' | 'dashboard'
-  
-  // Analyzer Form State
   const [uploadLoading,setUploadLoading]=useState(false)
   const [calcLoading,setCalcLoading]=useState(false)
   const [result,setResult]=useState(null)
+  
+  const [tab, setTab] = useState('analyzer')
+
   const [form,setForm]=useState({
     existing_merchant:'',total_amount:'',total_count:'',
     total_fees_paid:'',card_present_pct:'90',mode:'template'
@@ -537,29 +569,31 @@ export default function App() {
     finally { setCalcLoading(false) }
   }
 
-  if(authState.loading) return <div style={{padding:'4rem',textAlign:'center'}}>Loading...</div>
-  if(!authState.authenticated) return <LoginPage error={new URLSearchParams(window.location.search).get('error')}/>
-
   const canCalc=form.total_amount&&form.total_count&&form.total_fees_paid
 
+  if(authState.loading) return <div style={{padding:'4rem',textAlign:'center',color:'#fff'}}>Loading...</div>
+  if(!authState.authenticated) return <LoginPage error={new URLSearchParams(window.location.search).get('error')}/>
+
   return (
-    <div style={{minHeight:'100vh', display:'flex', flexDirection:'column', fontFamily:'var(--font-body)'}}>
-      
-      {/* Top Navigation */}
-      <header style={{background:'rgba(10,22,40,0.8)', backdropFilter:'blur(10px)', borderBottom:`1px solid rgba(255,255,255,.1)`, padding:'0 2rem', 
-        height:72, display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:100}}>
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column'}}>
+
+      <header style={{background:'rgba(10,22,40,.85)',backdropFilter:'blur(16px)',
+        borderBottom:'1px solid rgba(255,255,255,.1)', position:'sticky',top:0,zIndex:100,
+        padding:'0 2rem',height:72, display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         
-        <div style={{display:'flex', alignItems:'center', gap:'2.5rem'}}>
-          <img src="https://adit.com/storage/settings/logo.png" alt="Adit Logo" style={{height:28, filter:'brightness(0) invert(1)'}} onError={(e)=>{e.target.style.display='none'}}/>
-          
-          <nav style={{display:'flex', gap:'1rem'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'2rem'}}>
+          <div style={{display:'flex',alignItems:'center',gap:'.85rem'}}>
+            <img src="https://adit.com/storage/settings/logo.png" alt="Adit Logo" style={{height:28}} onError={(e)=>{e.target.style.display='none'}}/>
+          </div>
+
+          <nav style={{display:'flex', gap:'.5rem'}}>
             <button onClick={()=>setTab('analyzer')} style={{
-              background:tab==='analyzer'?'rgba(255,255,255,.1)':'transparent', color:tab==='analyzer'?'#fff':T.muted,
-              border:'none', padding:'8px 16px', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:'.95rem'
+              background:tab==='analyzer'?'rgba(255,255,255,.1)':'transparent', color:tab==='analyzer'?'#fff':'#94a3b8',
+              border:'none', padding:'8px 16px', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:'.95rem', fontFamily:'var(--font-head)'
             }}>Analyzer</button>
             <button onClick={()=>setTab('dashboard')} style={{
-              background:tab==='dashboard'?'rgba(255,255,255,.1)':'transparent', color:tab==='dashboard'?'#fff':T.muted,
-              border:'none', padding:'8px 16px', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:'.95rem'
+              background:tab==='dashboard'?'rgba(255,255,255,.1)':'transparent', color:tab==='dashboard'?'#fff':'#94a3b8',
+              border:'none', padding:'8px 16px', borderRadius:8, fontWeight:700, cursor:'pointer', fontSize:'.95rem', fontFamily:'var(--font-head)'
             }}>History Dashboard</button>
           </nav>
         </div>
@@ -567,58 +601,57 @@ export default function App() {
         <UserMenu user={authState.user}/>
       </header>
 
-      {/* Main Content Area */}
-      <main style={{maxWidth:1080, margin:'0 auto', padding:'3rem 1.5rem', width:'100%', flex:1}}>
-        
+      <main style={{maxWidth:1080,margin:'0 auto',padding:'3rem 1.5rem 4rem',width:'100%',
+        display:'flex',flexDirection:'column',gap:'1.5rem', flex:1}}>
+
         {tab === 'dashboard' ? (
           <HistoryDashboard />
         ) : (
-          <div style={{display:'flex', flexDirection:'column', gap:'1.5rem'}}>
-            <div style={{textAlign:'center', marginBottom:'1.5rem'}}>
-              <h1 style={{fontSize:'2.2rem', fontWeight:900, color:'#fff', letterSpacing:'-.02em'}}>Adit Statement Analysis</h1>
-              <p style={{color:T.muted, fontSize:'1.05rem', marginTop:'.5rem'}}>Extract statements and prepare a compelling Adit Pay pitch.</p>
+          <>
+            <div style={{textAlign:'center', marginBottom:'1rem'}}>
+              <h1 style={{fontFamily:'var(--font-head)',fontWeight:800, fontSize:'2.4rem', color:'#fff'}}>
+                Adit Statement Analysis
+              </h1>
+              <p style={{color:'#94a3b8',fontSize:'1rem',marginTop:'.5rem'}}>
+                Upload a processor statement and instantly extract figures with AI.
+              </p>
             </div>
 
-            <Card>
-              <SectionTitle icon={FileText}>Step 1 — Upload Statement</SectionTitle>
+            <GlassCard>
+              <SectionLabel icon={FileText}>Step 1 — Upload Statement</SectionLabel>
               <UploadZone onExtracted={onExtracted} setLoading={setUploadLoading} loading={uploadLoading}/>
-            </Card>
+            </GlassCard>
 
-            <Card>
-              <SectionTitle icon={Pencil}>Step 2 — Review & Edit Figures</SectionTitle>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:'1.5rem',marginBottom:'2rem'}}>
-                <Field label="Original Merchant" value={form.existing_merchant} onChange={set('existing_merchant')} />
-                <Field label="Gross Transaction Volume" value={form.total_amount} onChange={set('total_amount')} type="number" step="0.01" prefix="$" />
-                <Field label="Total Transactions" value={form.total_count} onChange={set('total_count')} type="number" step="1" />
-                <Field label="Total Fees Assessed" value={form.total_fees_paid} onChange={set('total_fees_paid')} type="number" step="0.01" prefix="$" />
+            <GlassCard>
+              <SectionLabel icon={Pencil}>Step 2 — Review &amp; Edit Figures</SectionLabel>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:'1rem',marginBottom:'1.5rem'}}>
+                <Field label="Merchant Name" value={form.existing_merchant} onChange={set('existing_merchant')}/>
+                <Field label="Total Volume" value={form.total_amount} onChange={set('total_amount')} type="number" prefix="$"/>
+                <Field label="Transactions" value={form.total_count} onChange={set('total_count')} type="number"/>
+                <Field label="Total Fees Paid" value={form.total_fees_paid} onChange={set('total_fees_paid')} type="number" prefix="$"/>
               </div>
 
-              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', borderTop:`1px solid ${T.border}`, paddingTop:'1.5rem'}}>
-                <div>
-                  <p style={{fontWeight:700, color:'#fff', fontSize:'.9rem'}}>Ready to verify?</p>
-                  <p style={{fontSize:'.8rem', color:T.muted}}>Ensure numbers match the source DB before proceeding.</p>
-                </div>
-                <button onClick={calculate} disabled={calcLoading||!canCalc}
-                  style={{display:'flex',alignItems:'center',gap:'.6rem', background:canCalc?'#00c8b4':'rgba(255,255,255,.1)', 
-                    color:'#fff',border:'none', padding:'.85rem 2.5rem',borderRadius:100,fontWeight:700,fontSize:'.95rem',
-                    cursor:canCalc?'pointer':'not-allowed', transition:'all .2s', boxShadow:canCalc?'0 4px 14px rgba(0,200,180,.3)':'none'}}>
-                  {calcLoading?<RefreshCw size={18} className="spin"/>:<Calculator size={18}/>}
-                  {calcLoading?'Running Audit':'Generate Proposal'}
-                </button>
-              </div>
-            </Card>
+              <button onClick={calculate} disabled={calcLoading||!canCalc}
+                style={{display:'inline-flex',alignItems:'center',gap:'.6rem',
+                  background:canCalc?'linear-gradient(135deg,#00c8b4 0%,#2563eb 100%)':'rgba(255,255,255,.08)',color:'#fff',border:'none',
+                  padding:'.75rem 2rem',borderRadius:100,fontWeight:700,fontSize:'.95rem',
+                  cursor:canCalc?'pointer':'not-allowed',fontFamily:'var(--font-head)'}}>
+                {calcLoading?<RefreshCw size={16} className="spin"/>:<Calculator size={16}/>}
+                Generate Proposal
+              </button>
+            </GlassCard>
 
             {result&&(
-              <div id="results-anchor" style={{marginTop:'1.5rem'}}>
+              <GlassCard id="results-anchor" style={{padding:0, overflow:'hidden'}}>
                 <AnalysisDashboard result={result}/>
-              </div>
+              </GlassCard>
             )}
-          </div>
+          </>
         )}
       </main>
       
-      <footer style={{textAlign:'center', padding:'2rem', color:T.muted, fontSize:'.85rem'}}>
-        © {new Date().getFullYear()} Adit Communications, Inc. All rights reserved.
+      <footer style={{borderTop:'1px solid rgba(255,255,255,.1)',padding:'1.5rem 2rem',textAlign:'center'}}>
+        <p style={{fontSize:'.8rem',color:'#94a3b8'}}>© {new Date().getFullYear()} Adit Communications, Inc.</p>
       </footer>
     </div>
   )
