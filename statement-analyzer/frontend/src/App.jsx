@@ -515,6 +515,8 @@ export default function App() {
   const [result,setResult]=useState(null)
   const [pendingFile,setPendingFile]=useState(null)
   const [uploadError,setUploadError]=useState(null)
+  const [retryCountdown,setRetryCountdown]=useState(0)
+  const countdownRef=useRef(null)
 
   const [tab, setTab] = useState('analyzer')
 
@@ -545,6 +547,8 @@ export default function App() {
   const analyzeStatement=async()=>{
     if(!pendingFile)return
     setUploadError(null)
+    setRetryCountdown(0)
+    if(countdownRef.current) clearInterval(countdownRef.current)
     setUploadLoading(true)
     const fd=new FormData(); fd.append('file',pendingFile)
     try {
@@ -553,7 +557,22 @@ export default function App() {
       if(!res.ok) throw new Error(data.detail||'Upload failed')
       onExtracted(data.extracted)
     } catch(e){
-      setUploadError(e.message)
+      const msg=e.message||'Unknown error'
+      setUploadError(msg)
+      // If rate-limited, start a 30-second countdown then auto-retry
+      if(msg.toLowerCase().includes('rate-limit')||msg.includes('429')||msg.includes('temporarily')){
+        let secs=30
+        setRetryCountdown(secs)
+        countdownRef.current=setInterval(()=>{
+          secs-=1
+          setRetryCountdown(secs)
+          if(secs<=0){
+            clearInterval(countdownRef.current)
+            setRetryCountdown(0)
+            setUploadError(null)
+          }
+        },1000)
+      }
     } finally {
       setUploadLoading(false)
     }
@@ -653,11 +672,24 @@ export default function App() {
                     : <><Sparkles size={18}/> Analyze the Statement</>}
                 </button>
                 {uploadError&&(
-                  <div style={{display:'flex',gap:'.6rem',alignItems:'flex-start',
-                    color:'#fca5a5',background:'rgba(239,68,68,.12)',border:'1px solid rgba(239,68,68,.25)',
-                    borderRadius:10,padding:'.75rem 1rem',fontSize:'.85rem'}}>
-                    <AlertCircle size={16} style={{flexShrink:0,marginTop:1}}/>
-                    <span><strong>Extraction failed:</strong> {uploadError}</span>
+                  <div style={{display:'flex',flexDirection:'column',gap:'.5rem',
+                    background:'rgba(239,68,68,.12)',border:'1px solid rgba(239,68,68,.25)',
+                    borderRadius:10,padding:'.85rem 1rem'}}>
+                    <div style={{display:'flex',gap:'.6rem',alignItems:'flex-start',color:'#fca5a5',fontSize:'.85rem'}}>
+                      <AlertCircle size={16} style={{flexShrink:0,marginTop:1}}/>
+                      <span>
+                        {retryCountdown>0
+                          ? <><strong>Rate limited.</strong> Auto-retrying in <strong style={{color:'#fbbf24'}}>{retryCountdown}s</strong> — the AI service is busy. You can also click Retry now.</>
+                          : <><strong>Extraction failed:</strong> {uploadError}</>}
+                      </span>
+                    </div>
+                    {retryCountdown>0&&(
+                      <button onClick={()=>{clearInterval(countdownRef.current);setRetryCountdown(0);setUploadError(null);analyzeStatement()}}
+                        style={{alignSelf:'flex-start',background:'rgba(251,191,36,.15)',border:'1px solid rgba(251,191,36,.35)',
+                          color:'#fbbf24',padding:'4px 14px',borderRadius:8,fontSize:'.8rem',fontWeight:700,cursor:'pointer',fontFamily:'var(--font-head)'}}>
+                        Retry Now
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

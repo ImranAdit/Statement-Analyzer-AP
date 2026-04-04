@@ -7,7 +7,7 @@ from authlib.integrations.starlette_client import OAuth
 from pydantic import BaseModel
 import pdfplumber, pytesseract
 from PIL import Image
-import io, re, os, secrets, sqlite3, json, httpx
+import io, re, os, secrets, sqlite3, json, httpx, asyncio
 
 def init_db():
     conn = sqlite3.connect("db.sqlite")
@@ -196,57 +196,79 @@ Example output:
 Now extract from this statement:
 """
 
+# Models to try in order — falls back if one is rate-limited or unavailable
+GEMINI_MODELS = [
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+]
+
+def _parse_ai_response(data: dict, extracted: dict) -> dict:
+    """Pull fields out of a Gemini response dict."""
+    text_resp = data["candidates"][0]["content"]["parts"][0]["text"]
+    text_resp = text_resp.strip().lstrip("```json").lstrip("```").rstrip("```").strip()
+    ai_data = json.loads(text_resp)
+    if ai_data.get("merchant_name"):
+        extracted["merchant"] = str(ai_data["merchant_name"]).strip()
+    if ai_data.get("total_amount_processed") is not None:
+        extracted["total_amount"] = str(ai_data["total_amount_processed"])
+    if ai_data.get("total_transactions_count") is not None:
+        extracted["total_count"] = str(int(float(str(ai_data["total_transactions_count"]))))
+    if ai_data.get("total_fees_paid") is not None:
+        extracted["total_fees"] = str(ai_data["total_fees_paid"])
+    return extracted
+
 async def parse_statement_with_ai(raw_text: str) -> dict:
-    """Call Gemini to extract structured data from raw statement text."""
-    extracted = {
-        "merchant": "",
-        "total_amount": "",
-        "total_count": "",
-        "total_fees": "",
-    }
+    """Call Gemini with retry + model fallback to extract structured data."""
+    extracted = {"merchant": "", "total_amount": "", "total_count": "", "total_fees": ""}
 
     if not raw_text or not raw_text.strip():
         return extracted
 
     api_key = os.getenv("GEMINI_API_KEY", "AIzaSyCJB3XbIbel0cot_SR24B59VtBWmp4ssh4")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-
     payload = {
         "contents": [{"parts": [{"text": GEMINI_PROMPT + "\n\n" + raw_text[:25000]}]}],
-        "generationConfig": {
-            "responseMimeType": "application/json",
-            "temperature": 0.1
-        }
+        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.1}
     }
 
-    try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(url, json=payload, timeout=45.0)
-            resp.raise_for_status()
-            data = resp.json()
+    last_error = None
+    async with httpx.AsyncClient() as client:
+        for model in GEMINI_MODELS:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            # Up to 3 attempts per model with exponential backoff on 429
+            for attempt in range(3):
+                try:
+                    resp = await client.post(url, json=payload, timeout=45.0)
+                    if resp.status_code == 429:
+                        wait = 2 ** attempt  # 1s, 2s, 4s
+                        print(f"[{model}] 429 rate limit, waiting {wait}s (attempt {attempt+1})")
+                        await asyncio.sleep(wait)
+                        continue  # retry same model
+                    resp.raise_for_status()
+                    data = resp.json()
+                    extracted = _parse_ai_response(data, extracted)
+                    print(f"[{model}] extraction succeeded")
+                    return extracted
+                except httpx.HTTPStatusError as e:
+                    last_error = e
+                    print(f"[{model}] HTTP error: {e}")
+                    break  # move to next model on non-429 HTTP errors
+                except Exception as e:
+                    last_error = e
+                    print(f"[{model}] error: {e}")
+                    break
 
-            text_resp = data["candidates"][0]["content"]["parts"][0]["text"]
-            # Strip any accidental markdown fences
-            text_resp = text_resp.strip().strip("```json").strip("```").strip()
-            ai_data = json.loads(text_resp)
-
-            if ai_data.get("merchant_name"):
-                extracted["merchant"] = str(ai_data["merchant_name"]).strip()
-            if ai_data.get("total_amount_processed") is not None:
-                extracted["total_amount"] = str(ai_data["total_amount_processed"])
-            if ai_data.get("total_transactions_count") is not None:
-                extracted["total_count"] = str(int(float(str(ai_data["total_transactions_count"]))))
-            if ai_data.get("total_fees_paid") is not None:
-                extracted["total_fees"] = str(ai_data["total_fees_paid"])
-
-    except Exception as e:
-        print(f"Gemini AI Parsing failed: {e}")
+    # All models/retries exhausted
+    err_str = str(last_error) if last_error else "Unknown error"
+    if "429" in err_str:
         raise HTTPException(
-            status_code=500,
-            detail=f"AI extraction failed: {str(e)}. Please check the file is a valid statement."
+            status_code=429,
+            detail="The AI service is temporarily rate-limited. Please wait 30 seconds and try again."
         )
-
-    return extracted
+    raise HTTPException(
+        status_code=500,
+        detail=f"AI extraction failed after trying all models. Error: {err_str}"
+    )
 
 # ── API Routes ─────────────────────────────────────────────────────────────────
 @app.get("/")
