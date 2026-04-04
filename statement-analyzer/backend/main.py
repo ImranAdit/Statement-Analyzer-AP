@@ -28,12 +28,10 @@ def init_db():
 init_db()
 app = FastAPI(title="Adit Pay Statement Analyser")
 
-# ── CONSTANTS (HARDCODED FOR STABILITY) ────────────────────────────────────────
+# ── CONSTANTS ──────────────────────────────────────────────────────────────────
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://statement-analyzer-ap-1.onrender.com")
 APP_BASE_URL = os.getenv("APP_BASE_URL", "https://statement-analyzer-ap.onrender.com")
-
 SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_hex(32))
-
 GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 ALLOWED_DOMAIN       = "adit.com"
@@ -72,7 +70,6 @@ def get_current_user(request: Request):
     return user
 
 # ── Auth Routes ────────────────────────────────────────────────────────────────
-
 @app.get("/auth/login")
 async def login(request: Request):
     redirect_uri = f"{APP_BASE_URL}/auth/callback"
@@ -99,8 +96,6 @@ async def auth_callback(request: Request):
         "name": user_info.get("name", email.split("@")[0]),
         "picture": user_info.get("picture", ""),
     }
-
-    # ✅ FINAL REDIRECT FIX
     return RedirectResponse(url=FRONTEND_URL)
 
 
@@ -138,74 +133,119 @@ def calc_online(amount, count):
             "trn_fee": round(tf, 2), "auth_fee": round(af, 2),
             "total_fee": round(tf + af, 2)}
 
-def build_analysis(existing_merchant, total_amount, total_count, total_fees_paid, card_present_pct):
-    cp = calc_cp(total_amount * card_present_pct, total_count * card_present_pct)
-    op = calc_online(total_amount * (1 - card_present_pct), total_count * (1 - card_present_pct))
-    adit_total = cp["total_fee"] + op["total_fee"]
+# ── File Text Extraction ───────────────────────────────────────────────────────
+def extract_text_from_file(data: bytes, filename: str) -> str:
+    """Extract raw text from PDF or image file."""
+    ext = (filename.split(".")[-1] if "." in filename else "").lower()
 
-    return {
-        "existing_merchant": existing_merchant,
-        "total_amount": total_amount,
-        "total_fees_paid": total_fees_paid,
-        "adit_total_fee": round(adit_total, 2),
-        "savings": round(total_fees_paid - adit_total, 2),
-    }
+    # PDF path
+    if ext == "pdf" or (not ext and data[:4] == b"%PDF"):
+        try:
+            text = ""
+            with pdfplumber.open(io.BytesIO(data)) as pdf:
+                for page in pdf.pages:
+                    t = page.extract_text()
+                    if t:
+                        text += t + "\n"
+            if text.strip():
+                return text
+        except Exception as e:
+            print(f"pdfplumber failed: {e}")
 
-# ── File Parsing ───────────────────────────────────────────────────────────────
-def extract_pdf(data):
-    text = ""
-    with pdfplumber.open(io.BytesIO(data)) as pdf:
-        for page in pdf.pages:
-            t = page.extract_text()
-            if t:
-                text += t + "\n"
-    return text
+    # Image path (PNG, JPG, TIFF, BMP, WebP) — also fallback for scanned PDFs
+    try:
+        img = Image.open(io.BytesIO(data))
+        text = pytesseract.image_to_string(img)
+        return text
+    except Exception as e:
+        print(f"OCR failed: {e}")
 
-async def parse_statement(raw):
+    return ""
+
+# ── AI Extraction via Gemini ───────────────────────────────────────────────────
+GEMINI_PROMPT = """You are an expert financial document parser specializing in merchant/credit card processing statements.
+
+Your job is to extract key billing data from ANY type of processor statement — including but not limited to:
+Square, Stripe, Chase Paymentech, First Data, TSYS, Heartland, Worldpay, Elavon, PayPal, Clover, Toast, Fiserv, Wells Fargo Merchant, Bank of America Merchant, and any other processor.
+
+Extract these four fields. Each processor uses DIFFERENT terminology — use your judgment to find the right values:
+
+1. merchant_name — The business/practice name (also called: DBA, Business Name, Account Name, Merchant Name, Customer Name)
+
+2. total_amount_processed — The TOTAL dollar volume of transactions processed in the statement period (also called: Gross Sales, Total Volume, Total Processing Volume, Sales Amount, Total Transactions Amount, Total Gross, Gross Receipts, Total Activity, Total Credits)
+   - This should be the GRAND TOTAL, not a subtotal for one card type
+   - Strip any $ signs and commas — return a plain float
+
+3. total_transactions_count — The TOTAL number of transactions/items (also called: Transaction Count, Number of Transactions, Item Count, # Items, Sales Count, Total Items, Num Transactions)
+   - Return a plain integer or float
+
+4. total_fees_paid — The TOTAL fees/charges billed for the period (also called: Total Fees, Total Service Charges, Total Discount, Total Deductions, Net Deduction, Processing Fees, Total Charges, Discount Amount, Service Fee, Total Cost)
+   - This is what the merchant PAID the processor, not what customers paid
+   - Strip any $ signs and commas — return a plain float
+
+CRITICAL RULES:
+- Return ONLY a raw JSON object with exactly these keys: merchant_name, total_amount_processed, total_transactions_count, total_fees_paid
+- Do NOT include markdown, code fences, or any other text
+- Look for SUMMARY/TOTAL rows — not individual line items for one card brand
+- If a field genuinely cannot be found, use null
+- All numeric values must be plain numbers (no $, no commas, no %)
+
+Example output:
+{"merchant_name": "Smith Dental Associates", "total_amount_processed": 125430.50, "total_transactions_count": 892, "total_fees_paid": 3762.91}
+
+Now extract from this statement:
+"""
+
+async def parse_statement_with_ai(raw_text: str) -> dict:
+    """Call Gemini to extract structured data from raw statement text."""
     extracted = {
         "merchant": "",
         "total_amount": "",
         "total_count": "",
         "total_fees": "",
-        "raw_text": raw[:2000]
     }
+
+    if not raw_text or not raw_text.strip():
+        return extracted
 
     api_key = os.getenv("GEMINI_API_KEY", "AIzaSyCJB3XbIbel0cot_SR24B59VtBWmp4ssh4")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-    
-    prompt = """
-    You are a financial analyst OCR data extraction tool.
-    Extract the following from this messy credit card processing statement text:
-    - merchant_name (string)
-    - total_amount_processed (float)
-    - total_transactions_count (integer)
-    - total_fees_paid (float)
-    
-    Return ONLY a raw JSON object. Do not include markdown formatting. 
-    If a value is truly missing or impossible to find, use null.
-    """
-    
+
     payload = {
-        "contents": [{"parts": [{"text": prompt + "\n\nTEXT:\n" + raw[:20000]}]}],
-        "generationConfig": {"responseMimeType": "application/json"}
+        "contents": [{"parts": [{"text": GEMINI_PROMPT + "\n\n" + raw_text[:25000]}]}],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "temperature": 0.1
+        }
     }
-    
+
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.post(url, json=payload, timeout=20.0)
+            resp = await client.post(url, json=payload, timeout=45.0)
             resp.raise_for_status()
             data = resp.json()
-            
+
             text_resp = data["candidates"][0]["content"]["parts"][0]["text"]
+            # Strip any accidental markdown fences
+            text_resp = text_resp.strip().strip("```json").strip("```").strip()
             ai_data = json.loads(text_resp)
-            
-            if ai_data.get("merchant_name"): extracted["merchant"] = str(ai_data["merchant_name"])
-            if ai_data.get("total_amount_processed") is not None: extracted["total_amount"] = str(ai_data["total_amount_processed"])
-            if ai_data.get("total_transactions_count") is not None: extracted["total_count"] = str(ai_data["total_transactions_count"])
-            if ai_data.get("total_fees_paid") is not None: extracted["total_fees"] = str(ai_data["total_fees_paid"])
+
+            if ai_data.get("merchant_name"):
+                extracted["merchant"] = str(ai_data["merchant_name"]).strip()
+            if ai_data.get("total_amount_processed") is not None:
+                extracted["total_amount"] = str(ai_data["total_amount_processed"])
+            if ai_data.get("total_transactions_count") is not None:
+                extracted["total_count"] = str(int(float(str(ai_data["total_transactions_count"]))))
+            if ai_data.get("total_fees_paid") is not None:
+                extracted["total_fees"] = str(ai_data["total_fees_paid"])
+
     except Exception as e:
         print(f"Gemini AI Parsing failed: {e}")
-        
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI extraction failed: {str(e)}. Please check the file is a valid statement."
+        )
+
     return extracted
 
 # ── API Routes ─────────────────────────────────────────────────────────────────
@@ -216,8 +256,18 @@ async def root():
 @app.post("/api/upload")
 async def upload_statement(file: UploadFile = File(...), user=Depends(get_current_user)):
     data = await file.read()
-    raw = extract_pdf(data)
-    extracted = await parse_statement(raw)
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty file uploaded.")
+
+    raw_text = extract_text_from_file(data, file.filename or "upload.pdf")
+
+    if not raw_text.strip():
+        raise HTTPException(
+            status_code=422,
+            detail="Could not extract any text from this file. Please ensure it is a readable PDF or clear image."
+        )
+
+    extracted = await parse_statement_with_ai(raw_text)
     return {"extracted": extracted}
 
 class CalculateRequest(BaseModel):
@@ -233,7 +283,7 @@ async def calculate_savings(req: CalculateRequest, user=Depends(get_current_user
     cp = calc_cp(req.total_amount * card_present_pct, req.total_count * card_present_pct)
     op = calc_online(req.total_amount * (1 - card_present_pct), req.total_count * (1 - card_present_pct))
     adit_total = cp["total_fee"] + op["total_fee"]
-    
+
     existing_avg_fee_pct = (req.total_fees_paid / req.total_amount) * 100 if req.total_amount > 0 else 0
     adit_avg_fee_pct = (adit_total / req.total_amount) * 100 if req.total_amount > 0 else 0
 
@@ -241,17 +291,24 @@ async def calculate_savings(req: CalculateRequest, user=Depends(get_current_user
     op["rate_label"] = f"{ADIT_RATE_ONL*100}% + ${ADIT_AUTH_ONL}"
 
     monthly_savings = req.total_fees_paid - adit_total
-    
-    # Generate AI Summary text
     diff_pct = (monthly_savings / req.total_fees_paid) * 100 if req.total_fees_paid > 0 else 0
     merchant_display = req.existing_merchant.upper() if req.existing_merchant else "MERCHANT"
-    ai_summary = f"{merchant_display} currently pays ${req.total_fees_paid:,.2f}/month to their existing processor at a {existing_avg_fee_pct:.2f}% effective rate. Switching to Adit Pay's flat-rate pricing brings that down to ${adit_total:,.2f}/month — a {diff_pct:.1f}% reduction worth ${monthly_savings:,.2f}/month in real cash back to the practice."
+
+    ai_summary = (
+        f"{merchant_display} currently pays ${req.total_fees_paid:,.2f}/month to their existing processor "
+        f"at a {existing_avg_fee_pct:.2f}% effective rate. Switching to Adit Pay's flat-rate pricing brings "
+        f"that down to ${adit_total:,.2f}/month — a {diff_pct:.1f}% reduction worth ${monthly_savings:,.2f}/month "
+        f"in real cash back to the practice."
+    )
 
     # Save to history DB
     conn = sqlite3.connect("db.sqlite")
     c = conn.cursor()
-    c.execute("INSERT INTO analysis_history (user_email, merchant, total_amount, total_fees_paid, savings, diff_pct) VALUES (?, ?, ?, ?, ?, ?)",
-              (user.get("email", "anonymous"), req.existing_merchant or "Unnamed Merchant", req.total_amount, req.total_fees_paid, monthly_savings, diff_pct))
+    c.execute(
+        "INSERT INTO analysis_history (user_email, merchant, total_amount, total_fees_paid, savings, diff_pct) VALUES (?, ?, ?, ?, ?, ?)",
+        (user.get("email", "anonymous"), req.existing_merchant or "Unnamed Merchant",
+         req.total_amount, req.total_fees_paid, monthly_savings, diff_pct)
+    )
     conn.commit()
     conn.close()
 
@@ -277,7 +334,7 @@ def get_history(request: Request):
     user = request.session.get("user")
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
+
     conn = sqlite3.connect("db.sqlite")
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
@@ -286,7 +343,7 @@ def get_history(request: Request):
     conn.close()
     return {"history": rows}
 
-# ── SPA Serve (optional) ───────────────────────────────────────────────────────
+# ── SPA Serve ──────────────────────────────────────────────────────────────────
 FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 
 if os.path.isdir(FRONTEND_DIST):

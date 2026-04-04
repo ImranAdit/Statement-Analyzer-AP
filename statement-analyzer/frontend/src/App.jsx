@@ -156,64 +156,52 @@ function LoginPage({error}) {
 }
 
 // ── Upload Zone ─────────────────────────────────────────────────────────────
-function UploadZone({onExtracted,setLoading,loading}) {
+// Purely handles file selection — does NOT auto-trigger analysis.
+// Calls onFileReady(file) so the parent can drive the Analyze button.
+function UploadZone({onFileReady, pendingFile, loading}) {
   const [drag,setDrag]=useState(false)
-  const [error,setError]=useState(null)
-  const [fileName,setFileName]=useState(null)
   const ref=useRef()
 
-  const handleFile=useCallback(async(file)=>{
+  const handleSelect=(file)=>{
     if(!file)return
-    setError(null); setFileName(file.name); setLoading(true)
-    const fd=new FormData(); fd.append('file',file)
-    try {
-      const res=await fetch(`${API}/api/upload`,{method:'POST',body:fd,credentials:'include'})
-      const data=await res.json()
-      if(!res.ok) throw new Error(data.detail||'Upload failed')
-      onExtracted(data.extracted)
-    } catch(e){ setError(e.message); setFileName(null) }
-    finally { setLoading(false) }
-  },[onExtracted,setLoading])
+    onFileReady(file)
+  }
+
+  const ready = !!pendingFile && !loading
 
   return (
-    <div>
-      <div onClick={()=>ref.current.click()}
-        onDragOver={e=>{e.preventDefault();setDrag(true)}}
-        onDragLeave={()=>setDrag(false)}
-        onDrop={e=>{e.preventDefault();setDrag(false);handleFile(e.dataTransfer.files[0])}}
-        style={{border:`2px dashed ${drag?T.teal:T.border}`,borderRadius:14,
-          padding:'2.75rem 1.5rem',textAlign:'center',cursor:'pointer',
-          background:drag?'rgba(0,200,180,.06)':'rgba(255,255,255,.02)',
-          transition:'all .25s',position:'relative',overflow:'hidden'}}>
-        {drag&&<div style={{position:'absolute',inset:0,pointerEvents:'none',
-          background:'radial-gradient(ellipse 60% 60% at 50% 50%,rgba(0,200,180,.08),transparent)'}}/>}
-        <div style={{width:56,height:56,borderRadius:16,margin:'0 auto 1rem',
-          background:drag?T.grad:'rgba(255,255,255,.06)',border:`1px solid ${drag?'transparent':T.border}`,
-          display:'flex',alignItems:'center',justifyContent:'center',transition:'all .25s'}}>
-          <Upload size={24} color={drag?'#fff':T.teal}/>
-        </div>
-        {fileName&&!loading ? (
-          <><p style={{fontWeight:700,fontSize:'1rem',color:T.teal,fontFamily:'var(--font-head)'}}>{fileName}</p>
-          <p style={{fontSize:'.82rem',color:T.muted,marginTop:'.35rem'}}>Extracted — review figures below ↓</p></>
-        ) : loading ? (
-          <><p style={{fontWeight:700,color:T.white,fontFamily:'var(--font-head)'}}>Extracting with AI…</p>
-          <p style={{fontSize:'.82rem',color:T.muted,marginTop:'.35rem'}}>Analyzing document layout</p></>
-        ) : (
-          <><p style={{fontWeight:700,fontSize:'1rem',color:T.white,fontFamily:'var(--font-head)'}}>
-            Drop your bank statement here</p>
-          <p style={{fontSize:'.82rem',color:T.muted,marginTop:'.4rem'}}>
-            PDF or scanned image (PNG, JPG, TIFF) · Click to browse</p></>
-        )}
-        <input ref={ref} type="file" accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp,.webp"
-          style={{display:'none'}} onChange={e=>handleFile(e.target.files[0])}/>
+    <div
+      onClick={()=>!loading&&ref.current.click()}
+      onDragOver={e=>{e.preventDefault();if(!loading)setDrag(true)}}
+      onDragLeave={()=>setDrag(false)}
+      onDrop={e=>{e.preventDefault();setDrag(false);handleSelect(e.dataTransfer.files[0])}}
+      style={{border:`2px dashed ${drag?T.teal:ready?'rgba(0,200,180,.5)':T.border}`,borderRadius:14,
+        padding:'2.5rem 1.5rem',textAlign:'center',cursor:loading?'default':'pointer',
+        background:drag?'rgba(0,200,180,.06)':ready?'rgba(0,200,180,.04)':'rgba(255,255,255,.02)',
+        transition:'all .25s',position:'relative',overflow:'hidden'}}>
+      {drag&&<div style={{position:'absolute',inset:0,pointerEvents:'none',
+        background:'radial-gradient(ellipse 60% 60% at 50% 50%,rgba(0,200,180,.08),transparent)'}}/>}
+      <div style={{width:52,height:52,borderRadius:16,margin:'0 auto .9rem',
+        background:ready?T.grad:drag?T.grad:'rgba(255,255,255,.06)',
+        border:`1px solid ${ready||drag?'transparent':T.border}`,
+        display:'flex',alignItems:'center',justifyContent:'center',transition:'all .25s'}}>
+        {loading
+          ? <RefreshCw size={22} color="#fff" className="spin"/>
+          : <Upload size={22} color={ready||drag?'#fff':T.teal}/>}
       </div>
-      {error&&(
-        <div style={{marginTop:'.85rem',display:'flex',gap:'.6rem',alignItems:'flex-start',
-          color:'#fca5a5',background:'rgba(239,68,68,.12)',border:'1px solid rgba(239,68,68,.25)',
-          borderRadius:10,padding:'.65rem 1rem',fontSize:'.85rem'}}>
-          <AlertCircle size={16} style={{flexShrink:0,marginTop:1}}/>{error}
-        </div>
+      {loading ? (
+        <><p style={{fontWeight:700,color:T.white,fontFamily:'var(--font-head)',fontSize:'1rem'}}>Reading with AI…</p>
+        <p style={{fontSize:'.82rem',color:T.muted,marginTop:'.35rem'}}>This may take 15–30 seconds</p></>
+      ) : ready ? (
+        <><p style={{fontWeight:700,fontSize:'1rem',color:T.teal,fontFamily:'var(--font-head)'}}>{pendingFile.name}</p>
+        <p style={{fontSize:'.82rem',color:T.muted,marginTop:'.35rem'}}>Ready — click "Analyze the Statement" below ↓</p></>
+      ) : (
+        <><p style={{fontWeight:700,fontSize:'1rem',color:T.white,fontFamily:'var(--font-head)'}}>Drop your processor statement here</p>
+        <p style={{fontSize:'.82rem',color:T.muted,marginTop:'.4rem'}}>
+          Supports any processor — PDF, PNG, JPG, TIFF · Click to browse</p></>
       )}
+      <input ref={ref} type="file" accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp,.webp"
+        style={{display:'none'}} onChange={e=>handleSelect(e.target.files[0])}/>
     </div>
   )
 }
@@ -525,7 +513,9 @@ export default function App() {
   const [uploadLoading,setUploadLoading]=useState(false)
   const [calcLoading,setCalcLoading]=useState(false)
   const [result,setResult]=useState(null)
-  
+  const [pendingFile,setPendingFile]=useState(null)
+  const [uploadError,setUploadError]=useState(null)
+
   const [tab, setTab] = useState('analyzer')
 
   const [form,setForm]=useState({
@@ -548,6 +538,25 @@ export default function App() {
       total_fees_paid:extracted.total_fees??f.total_fees_paid,
     }))
     setResult(null)
+    // Scroll to Step 2 after extraction
+    setTimeout(()=>document.getElementById('step2-anchor')?.scrollIntoView({behavior:'smooth'}),120)
+  }
+
+  const analyzeStatement=async()=>{
+    if(!pendingFile)return
+    setUploadError(null)
+    setUploadLoading(true)
+    const fd=new FormData(); fd.append('file',pendingFile)
+    try {
+      const res=await fetch(`${API}/api/upload`,{method:'POST',body:fd,credentials:'include'})
+      const data=await res.json()
+      if(!res.ok) throw new Error(data.detail||'Upload failed')
+      onExtracted(data.extracted)
+    } catch(e){
+      setUploadError(e.message)
+    } finally {
+      setUploadLoading(false)
+    }
   }
 
   const calculate=async()=>{
@@ -619,10 +628,42 @@ export default function App() {
 
             <GlassCard>
               <SectionLabel icon={FileText}>Step 1 — Upload Statement</SectionLabel>
-              <UploadZone onExtracted={onExtracted} setLoading={setUploadLoading} loading={uploadLoading}/>
+              <UploadZone onFileReady={f=>{setPendingFile(f);setUploadError(null)}} pendingFile={pendingFile} loading={uploadLoading}/>
+
+              {/* Analyze button */}
+              <div style={{marginTop:'1.25rem',display:'flex',flexDirection:'column',gap:'.75rem'}}>
+                <button
+                  id="analyze-btn"
+                  onClick={analyzeStatement}
+                  disabled={!pendingFile||uploadLoading}
+                  style={{
+                    display:'inline-flex',alignItems:'center',justifyContent:'center',gap:'.65rem',
+                    width:'100%',padding:'1rem',borderRadius:12,border:'none',fontFamily:'var(--font-head)',
+                    fontWeight:800,fontSize:'1.05rem',cursor:(!pendingFile||uploadLoading)?'not-allowed':'pointer',
+                    background:(!pendingFile||uploadLoading)?'rgba(255,255,255,.08)':T.grad,
+                    color:'#fff',transition:'opacity .2s, transform .15s',
+                    opacity:(!pendingFile||uploadLoading)?0.5:1,
+                    boxShadow:(!pendingFile||uploadLoading)?'none':'0 4px 20px rgba(0,200,180,.3)'
+                  }}
+                  onMouseEnter={e=>{if(pendingFile&&!uploadLoading)e.currentTarget.style.transform='translateY(-1px)'}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)'}}
+                >
+                  {uploadLoading
+                    ? <><RefreshCw size={18} className="spin"/> Reading statement with AI…</>
+                    : <><Sparkles size={18}/> Analyze the Statement</>}
+                </button>
+                {uploadError&&(
+                  <div style={{display:'flex',gap:'.6rem',alignItems:'flex-start',
+                    color:'#fca5a5',background:'rgba(239,68,68,.12)',border:'1px solid rgba(239,68,68,.25)',
+                    borderRadius:10,padding:'.75rem 1rem',fontSize:'.85rem'}}>
+                    <AlertCircle size={16} style={{flexShrink:0,marginTop:1}}/>
+                    <span><strong>Extraction failed:</strong> {uploadError}</span>
+                  </div>
+                )}
+              </div>
             </GlassCard>
 
-            <GlassCard>
+            <GlassCard id="step2-anchor">
               <SectionLabel icon={Pencil}>Step 2 — Review &amp; Edit Figures</SectionLabel>
               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:'1rem',marginBottom:'1.5rem'}}>
                 <Field label="Merchant Name" value={form.existing_merchant} onChange={set('existing_merchant')}/>
