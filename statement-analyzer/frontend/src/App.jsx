@@ -45,7 +45,7 @@ function TealBadge({children}) {
 
 function SectionLabel({icon:Icon,children}) {
   return (
-    <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1.25rem'}}>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:'1.25rem'}}>
       <div style={{width:34,height:34,borderRadius:10,background:T.grad,
         display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
         <Icon size={16} color="#fff"/>
@@ -629,7 +629,7 @@ export default function App() {
         <UserMenu user={authState.user}/>
       </header>
 
-      <main style={{maxWidth:1080,margin:'0 auto',padding:'3rem 1.5rem 4rem',width:'100%',
+      <main style={{maxWidth:720,margin:'0 auto',padding:'3rem 1.5rem 4rem',width:'100%',
         display:'flex',flexDirection:'column',gap:'1.5rem', flex:1}}>
 
         {tab === 'dashboard' ? (
@@ -704,14 +704,17 @@ export default function App() {
                 <Field label="Total Fees Paid" value={form.total_fees_paid} onChange={set('total_fees_paid')} type="number" prefix="$"/>
               </div>
 
-              <button onClick={calculate} disabled={calcLoading||!canCalc}
-                style={{display:'inline-flex',alignItems:'center',gap:'.6rem',
-                  background:canCalc?'linear-gradient(135deg,#00c8b4 0%,#2563eb 100%)':'rgba(255,255,255,.08)',color:'#fff',border:'none',
-                  padding:'.75rem 2rem',borderRadius:100,fontWeight:700,fontSize:'.95rem',
-                  cursor:canCalc?'pointer':'not-allowed',fontFamily:'var(--font-head)'}}>
-                {calcLoading?<RefreshCw size={16} className="spin"/>:<Calculator size={16}/>}
-                Generate Proposal
-              </button>
+              <div style={{display:'flex',justifyContent:'center',marginTop:'.5rem'}}>
+                <button onClick={calculate} disabled={calcLoading||!canCalc}
+                  style={{display:'inline-flex',alignItems:'center',gap:'.6rem',
+                    background:canCalc?'linear-gradient(135deg,#00c8b4 0%,#2563eb 100%)':'rgba(255,255,255,.08)',color:'#fff',border:'none',
+                    padding:'.85rem 2.5rem',borderRadius:100,fontWeight:700,fontSize:'1rem',
+                    cursor:canCalc?'pointer':'not-allowed',fontFamily:'var(--font-head)',
+                    boxShadow:canCalc?'0 4px 20px rgba(0,200,180,.25)':'none'}}>
+                  {calcLoading?<RefreshCw size={16} className="spin"/>:<Calculator size={16}/>}
+                  Generate Proposal
+                </button>
+              </div>
             </GlassCard>
 
             {result&&(
