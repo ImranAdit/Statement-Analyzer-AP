@@ -526,11 +526,49 @@ export default function App() {
   })
   const set=key=>val=>setForm(f=>({...f,[key]:val}))
 
-  useEffect(()=>{
-    fetch(`${API}/api/me`, {credentials: 'include'}).then(r=>r.json()).then(data=>{
-      setAuthState({loading:false,authenticated:data.authenticated,user:data.user||null})
-    }).catch(()=>setAuthState({loading:false,authenticated:false,user:null}))
-  },[])
+  useEffect(() => {
+  const controller = new AbortController();
+
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, 8000); // 8 sec timeout
+
+  const hasSession = sessionStorage.getItem("sessionActive");
+
+  // 🔐 Force fresh login on new tab
+  if (!hasSession) {
+    fetch(`${API}/auth/logout`, {
+      credentials: "include",
+    }).finally(() => {
+      sessionStorage.setItem("sessionActive", "true");
+      setAuthState({ loading: false, authenticated: false, user: null });
+    });
+    return;
+  }
+
+  fetch(`${API}/api/me`, {
+    credentials: "include",
+    signal: controller.signal,
+  })
+    .then((r) => {
+      if (!r.ok) throw new Error("Auth failed");
+      return r.json();
+    })
+    .then((data) => {
+      setAuthState({
+        loading: false,
+        authenticated: data.authenticated,
+        user: data.user || null,
+      });
+    })
+    .catch((err) => {
+      console.error("Auth error or timeout:", err);
+      setAuthState({ loading: false, authenticated: false, user: null });
+    })
+    .finally(() => {
+      clearTimeout(timeout);
+    });
+}, []);
 
   const onExtracted=extracted=>{
     setForm(f=>({...f,
