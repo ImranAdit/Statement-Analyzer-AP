@@ -382,11 +382,18 @@ function HistoryDashboard() {
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetch(`${API}/api/history`, {credentials: 'include'})
-      .then(r => r.json())
-      .then(d => { setHistory(d.history || []); setLoading(false) })
-  }, [])
+  fetch(`${API}/api/history`, {
+  credentials: "include",
+})
+  .then((r) => {
+    if (!r.ok) throw new Error("Failed to load history");
+    return r.json();
+  })
+  .then((d) => {
+    setHistory(d.history || []);
+    setLoading(false);
+  })
+  .catch(() => setLoading(false));
 
   if (loading) return <div style={{textAlign:'center', padding:'4rem', color:'#94a3b8'}}>Loading history database...</div>
   if (history.length === 0) return (
