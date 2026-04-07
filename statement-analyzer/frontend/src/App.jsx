@@ -101,10 +101,27 @@ function LoginPage({error}) {
         background:'radial-gradient(ellipse 60% 60% at 50% 40%,rgba(0,200,180,.1) 0%,transparent 70%)'}}/> 
 
       <div style={{width:'100%',maxWidth:420,position:'relative',zIndex:1}}>
-        <div style={{textAlign:'center',marginBottom:'2.5rem'}}>
-          <img src="https://adit.com/storage/settings/logo.png" alt="Adit Logo" style={{height:40, marginBottom:'1rem'}} onError={(e)=>{e.target.style.display='none'}}/>
-          <TealBadge><ShieldCheck size={11}/> Internal Tool</TealBadge>
-        </div>
+        <div style={{
+  display:'flex',
+  flexDirection:'column',
+  alignItems:'center',
+  justifyContent:'center',
+  marginBottom:'2.5rem',
+  textAlign:'center'
+}}>
+  <img
+    src="https://adit.com/storage/settings/logo.png"
+    alt="Adit Logo"
+    style={{height:50, marginBottom:'0.75rem'}}
+    onError={(e)=>{e.target.style.display='none'}}
+  />
+
+  <div style={{display:'flex', justifyContent:'center'}}>
+    <TealBadge>
+      <ShieldCheck size={11}/> Internal Tool
+    </TealBadge>
+  </div>
+</div>
 
         <div style={{background:'rgba(255,255,255,.05)',border:`1px solid ${T.border}`,
           borderRadius:20,backdropFilter:'blur(16px)',padding:'2.25rem 2rem'}}>
